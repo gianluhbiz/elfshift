@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Elfshift.UI
 {
-    /// <summary>Mostra in alto una carta per ogni ordine aperto.</summary>
+    /// <summary>Mostra in alto una carta per ogni ordine aperto, con le animazioni di consegna e scadenza.</summary>
     public sealed class OrderBarView : MonoBehaviour
     {
         [SerializeField] private OrderManager orders;
@@ -38,8 +38,18 @@ namespace Elfshift.UI
         }
 
         private void OnOrderAdded(Order order) { AddCard(order); }
-        private void OnOrderCompleted(Order order, OrderResult result) { RemoveCard(order); }
-        private void OnOrderFailed(Order order) { RemoveCard(order); }
+
+        private void OnOrderCompleted(Order order, OrderResult result)
+        {
+            OrderCardView card = Detach(order);
+            if (card != null) card.PlayComplete(null);
+        }
+
+        private void OnOrderFailed(Order order)
+        {
+            OrderCardView card = Detach(order);
+            if (card != null) card.PlayFail(null);
+        }
 
         private void AddCard(Order order)
         {
@@ -49,15 +59,18 @@ namespace Elfshift.UI
             cards.Add(card);
         }
 
-        private void RemoveCard(Order order)
+        /// <summary>Toglie la carta dall'elenco (continua ad animarsi da sola e poi si distrugge).</summary>
+        private OrderCardView Detach(Order order)
         {
             for (int i = cards.Count - 1; i >= 0; i--)
             {
                 if (cards[i] == null) { cards.RemoveAt(i); continue; }
                 if (cards[i].Order != order) continue;
-                Destroy(cards[i].gameObject);
+                OrderCardView card = cards[i];
                 cards.RemoveAt(i);
+                return card;
             }
+            return null;
         }
     }
 }

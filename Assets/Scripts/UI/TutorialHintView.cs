@@ -20,6 +20,7 @@ namespace Elfshift.UI
         [SerializeField] private OrderManager orders;
         [SerializeField] private GameObject root;
         [SerializeField] private Text label;
+        [SerializeField] private UiPop labelPop;
 
         [Header("Freccia dorata sopra il prossimo bersaglio")]
         [SerializeField] private Transform marker;
@@ -95,6 +96,7 @@ namespace Elfshift.UI
             if (string.Equals(text, shown)) return;
             shown = text;
             label.text = text;
+            if (labelPop != null) labelPop.Play();
         }
     }
 }

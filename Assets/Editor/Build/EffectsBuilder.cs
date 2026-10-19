@@ -215,6 +215,46 @@ namespace Elfshift.EditorTools
             }
         }
 
+        // ------------------------------------------------------------------ Qualità grafica
+        /// <summary>
+        /// Alza la qualità del progetto URP: anti-aliasing 4x, ombre morbide ad alta risoluzione, più luci per oggetto.
+        /// Usa SerializedObject: le impostazioni che non esistono in questa versione di URP vengono semplicemente ignorate.
+        /// </summary>
+        public static void ApplyQualitySettings()
+        {
+            RenderPipelineAsset asset = GraphicsSettings.currentRenderPipeline;
+            if (asset == null) return;
+            SerializedObject so = new SerializedObject(asset);
+            SetInt(so, "m_MSAA", 4);
+            SetInt(so, "m_MainLightShadowmapResolution", 4096);
+            SetBool(so, "m_SoftShadowsSupported", true);
+            SetInt(so, "m_SoftShadowQuality", 2);
+            SetFloat(so, "m_ShadowDistance", 70f);
+            SetInt(so, "m_ShadowCascadeCount", 4);
+            SetBool(so, "m_SupportsHDR", true);
+            SetInt(so, "m_AdditionalLightsPerObjectLimit", 8);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+        }
+
+        private static void SetInt(SerializedObject so, string name, int value)
+        {
+            SerializedProperty p = so.FindProperty(name);
+            if (p != null) p.intValue = value;
+        }
+
+        private static void SetBool(SerializedObject so, string name, bool value)
+        {
+            SerializedProperty p = so.FindProperty(name);
+            if (p != null) p.boolValue = value;
+        }
+
+        private static void SetFloat(SerializedObject so, string name, float value)
+        {
+            SerializedProperty p = so.FindProperty(name);
+            if (p != null) p.floatValue = value;
+        }
+
         // ------------------------------------------------------------------ Post-elaborazione URP
         /// <summary>Volume globale: bagliore morbido, colori caldi e vivaci, leggera vignetta.</summary>
         public static Volume CreatePostProcessing(Transform parent, string profileAssetPath)

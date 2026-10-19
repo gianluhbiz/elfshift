@@ -14,6 +14,8 @@ namespace Elfshift.Core
         Vector2 LookDelta { get; }
         /// <summary>Tasto sinistro del mouse / grilletto destro: prendi, posa o consegna (vero solo nel frame della pressione).</summary>
         bool PickupPressed { get; }
+        /// <summary>Maiusc sinistro / pressione dello stick sinistro: scatto (vero finché è tenuto premuto).</summary>
+        bool SprintHeld { get; }
         /// <summary>Spazio / pulsante A: salto (vero solo nel frame della pressione).</summary>
         bool JumpPressed { get; }
         /// <summary>E / tasto destro del mouse / pulsante X: interazione, vero finché è tenuto premuto.</summary>

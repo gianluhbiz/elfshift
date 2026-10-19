@@ -49,6 +49,10 @@ namespace Elfshift.EditorTools
                 Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
                 ResetGeneratedAssets();
 
+                Step("Shader e qualità grafica...", 0.05f);
+                AssetDatabase.ImportAsset("Assets/Shaders/ElfshiftStylizedLit.shader", ImportAssetOptions.ForceSynchronousImport);
+                EffectsBuilder.ApplyQualitySettings();
+
                 Step("Texture e materiali...", 0.08f);
                 Texture2D planks = SaveTexture(ProceduralTextures.WoodPlanks(512), AssetUtil.GeneratedTextures + "/floor_planks.png");
                 Material floorMat = MaterialLibrary.GetTextured("FloorPlanks", planks, Vector2.one, 0.3f);
@@ -164,6 +168,7 @@ namespace Elfshift.EditorTools
             AssetUtil.EnsureFolder(AssetUtil.GeneratedPrefabs + "/Items");
             AssetUtil.EnsureFolder(AssetUtil.GeneratedPrefabs + "/Stations");
             MaterialLibrary.ClearCache();
+            MaterialLibrary.ClearShaderCache();
             BulbRenderers.Clear();
             BulbColors.Clear();
         }
@@ -636,10 +641,16 @@ namespace Elfshift.EditorTools
             Wire.Ref(look, "body", player.transform);
 
             Transform handSocket = CharacterModels.BuildFirstPersonHands(camObject.transform);
+            Transform handsRoot = handSocket.parent;
 
             carrier = player.AddComponent<Carrier>();
             Wire.Ref(carrier, "handSocket", handSocket);
             PlayerController movement = player.AddComponent<PlayerController>();
+            FirstPersonFeel feel = camObject.AddComponent<FirstPersonFeel>();
+            Wire.Ref(feel, "player", movement);
+            Wire.Ref(feel, "look", look);
+            Wire.Ref(feel, "cam", cam);
+            Wire.Ref(feel, "hands", handsRoot);
             interactor = player.AddComponent<PlayerInteractor>();
             Wire.Ref(interactor, "carrier", carrier);
             Wire.Ref(interactor, "movement", movement);

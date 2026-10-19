@@ -27,6 +27,27 @@ namespace Elfshift.EditorBootstrap
             "• mancano i pacchetti Input System o Universal RP (Window > Package Manager > Unity Registry);\n" +
             "• la cartella Assets è stata copiata nel posto sbagliato: devono esistere Assets/Scripts e Assets/Editor.";
 
+        private const string StylizedPrefKey = "Elfshift.StylizedShader";
+        private const string StylizedMenu = "Elfshift/Grafica/Shader stilizzato (attivo)";
+
+        [MenuItem(StylizedMenu)]
+        public static void ToggleStylizedShader()
+        {
+            bool now = !EditorPrefs.GetBool(StylizedPrefKey, true);
+            EditorPrefs.SetBool(StylizedPrefKey, now);
+            EditorUtility.DisplayDialog("Elfshift - grafica",
+                now ? "Shader stilizzato ATTIVATO.\nRilancia \"Fase 1 > 2 - Costruisci il laboratorio\" per applicarlo."
+                    : "Shader stilizzato DISATTIVATO (si usa il shader standard di URP).\nRilancia \"Fase 1 > 2 - Costruisci il laboratorio\" per applicarlo.",
+                "OK");
+        }
+
+        [MenuItem(StylizedMenu, true)]
+        public static bool ToggleStylizedShaderValidate()
+        {
+            Menu.SetChecked(StylizedMenu, EditorPrefs.GetBool(StylizedPrefKey, true));
+            return true;
+        }
+
         [MenuItem("Elfshift/Fase 1/0 - Aiuto: il menu non funziona?")]
         public static void Help()
         {
@@ -77,7 +98,7 @@ namespace Elfshift.EditorBootstrap
             EditorUtility.DisplayDialog(
                 "Elfshift - laboratorio pronto!",
                 "La scena \"Workshop\" è stata creata e aperta.\n\nPremi il pulsante Play (▶) in alto al centro per giocare.\n\n" +
-                "Controlli: WASD/frecce = muoviti, Spazio = salta, clic sinistro = prendi/posa, E (tenuto premuto) = costruisci.",
+                "Controlli: WASD = muoviti, Maiusc = scatta, Spazio = salta, clic sinistro = prendi/posa, E (tenuto premuto) = costruisci.",
                 "Ho capito");
         }
 

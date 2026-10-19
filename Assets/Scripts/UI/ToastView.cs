@@ -3,21 +3,19 @@ using UnityEngine.UI;
 
 namespace Elfshift.UI
 {
-    /// <summary>Messaggio breve al centro dello schermo che compare e svanisce.</summary>
+    /// <summary>Messaggio breve al centro dello schermo: salta fuori con un rimbalzo e poi si rimpicciolisce svanendo.</summary>
     public sealed class ToastView : MonoBehaviour
     {
         [SerializeField] private Text label;
         [SerializeField] private CanvasGroup group;
-        [SerializeField] private float visibleSeconds = 1.8f;
+        [SerializeField] private float visibleSeconds = 2.2f;
 
         private float timer;
         private float totalTime;
-        private Vector2 basePosition;
 
         private void Awake()
         {
             if (group != null) group.alpha = 0f;
-            basePosition = ((RectTransform)transform).anchoredPosition;
         }
 
         /// <summary>Mostra un messaggio per il tempo predefinito.</summary>
@@ -31,7 +29,7 @@ namespace Elfshift.UI
         {
             if (label == null || group == null || string.IsNullOrEmpty(message)) return;
             label.text = message;
-            totalTime = Mathf.Max(0.5f, seconds);
+            totalTime = Mathf.Max(0.8f, seconds);
             timer = totalTime;
         }
 
@@ -44,11 +42,11 @@ namespace Elfshift.UI
                 return;
             }
             timer -= Time.unscaledDeltaTime;
-            float fadeIn = Mathf.Clamp01((totalTime - timer) / 0.12f);
-            float fadeOut = Mathf.Clamp01(timer / 0.35f);
-            group.alpha = Mathf.Min(fadeIn, fadeOut);
-            float rise = (1f - Mathf.Clamp01(timer / totalTime)) * 16f;
-            ((RectTransform)transform).anchoredPosition = basePosition + new Vector2(0f, rise);
+            float elapsed = totalTime - timer;
+            float pop = Mathf.LerpUnclamped(0.4f, 1f, UiAnim.ElasticOut(Mathf.Clamp01(elapsed / 0.5f)));
+            float outK = Mathf.Clamp01(1f - timer / 0.3f); // ultimi 0,3 s
+            group.alpha = Mathf.Clamp01(elapsed / 0.08f) * (1f - outK);
+            transform.localScale = Vector3.one * (pop * (1f - outK * 0.15f));
         }
     }
 }

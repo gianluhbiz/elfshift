@@ -13,6 +13,7 @@ namespace Elfshift.Core
     ///   Sguardo ....... mouse / stick destro
     ///   Raccogli/posa . tasto sinistro del mouse / grilletto destro
     ///   Salto ......... Spazio / pulsante A (Sud)
+    ///   Scatto ........ Maiusc sinistro / pressione dello stick sinistro (tenuto)
     ///   Interagisci ... E / tasto destro del mouse / pulsante X (Ovest) - da tenere premuto
     ///   Pausa ......... Esc / Start
     /// </summary>
@@ -27,6 +28,7 @@ namespace Elfshift.Core
         private InputAction moveAction;
         private InputAction pickupAction;
         private InputAction jumpAction;
+        private InputAction sprintAction;
         private InputAction interactAction;
         private InputAction pauseAction;
 
@@ -51,6 +53,7 @@ namespace Elfshift.Core
 
         public bool PickupPressed => pickupAction.WasPressedThisFrame();
         public bool JumpPressed => jumpAction.WasPressedThisFrame();
+        public bool SprintHeld => sprintAction.IsPressed();
         public bool InteractHeld => interactAction.IsPressed();
         public bool PausePressed => pauseAction.WasPressedThisFrame();
 
@@ -81,6 +84,10 @@ namespace Elfshift.Core
             jumpAction.AddBinding("<Keyboard>/space");
             jumpAction.AddBinding("<Gamepad>/buttonSouth");
 
+            sprintAction = new InputAction("Sprint", InputActionType.Button);
+            sprintAction.AddBinding("<Keyboard>/leftShift");
+            sprintAction.AddBinding("<Gamepad>/leftStickPress");
+
             interactAction = new InputAction("Interact", InputActionType.Button);
             interactAction.AddBinding("<Keyboard>/e");
             interactAction.AddBinding("<Mouse>/rightButton");
@@ -98,6 +105,7 @@ namespace Elfshift.Core
             lookStickAction.Enable();
             pickupAction.Enable();
             jumpAction.Enable();
+            sprintAction.Enable();
             interactAction.Enable();
             pauseAction.Enable();
         }
@@ -109,6 +117,7 @@ namespace Elfshift.Core
             lookStickAction.Disable();
             pickupAction.Disable();
             jumpAction.Disable();
+            sprintAction.Disable();
             interactAction.Disable();
             pauseAction.Disable();
         }
@@ -120,6 +129,7 @@ namespace Elfshift.Core
             lookStickAction?.Dispose();
             pickupAction?.Dispose();
             jumpAction?.Dispose();
+            sprintAction?.Dispose();
             interactAction?.Dispose();
             pauseAction?.Dispose();
         }

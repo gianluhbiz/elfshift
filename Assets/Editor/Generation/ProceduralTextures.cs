@@ -152,7 +152,7 @@ namespace Elfshift.EditorTools
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             Color[] px = new Color[size * size];
             float c = size * 0.5f;
-            float r = size * 0.44f;
+            float r = size * 0.38f;
             Color baseColor = Palette.Hex("#D9983F");
             Color edge = Palette.Hex("#B8742A");
             Color chip = Palette.Hex("#5A3320");
@@ -177,6 +177,7 @@ namespace Elfshift.EditorTools
                     px[y * size + x] = col;
                 }
             }
+            AddOutline(px, size, Mathf.Max(3, size / 24), InkColor);
             tex.SetPixels(px);
             tex.Apply();
             return tex;
@@ -187,7 +188,7 @@ namespace Elfshift.EditorTools
         {
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             Color[] px = new Color[size * size];
-            Vector2[] outline = MeshBuilder.StarOutline(5, size * 0.46f, size * 0.2f);
+            Vector2[] outline = MeshBuilder.StarOutline(5, size * 0.4f, size * 0.17f);
             Color gold = Palette.Hex("#FFC93C");
             Color light = Palette.Hex("#FFE58A");
             for (int y = 0; y < size; y++)
@@ -202,6 +203,7 @@ namespace Elfshift.EditorTools
                     px[y * size + x] = col;
                 }
             }
+            AddOutline(px, size, Mathf.Max(3, size / 24), InkColor);
             tex.SetPixels(px);
             tex.Apply();
             return tex;
@@ -232,6 +234,138 @@ namespace Elfshift.EditorTools
                 best = Mathf.Min(best, (p - q).magnitude);
             }
             return best;
+        }
+
+        // ------------------------------------------------------------------ Stile cartoon per l'interfaccia
+        /// <summary>Marrone scuro caldo usato per tutti i contorni dell'interfaccia.</summary>
+        public static readonly Color InkColor = new Color(0.23f, 0.15f, 0.13f, 1f);
+
+        /// <summary>Aggiunge un contorno scuro attorno alle forme già disegnate (usa il canale alfa).</summary>
+        private static void AddOutline(Color[] px, int size, int thickness, Color outline)
+        {
+            Color[] result = (Color[])px.Clone();
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    if (px[y * size + x].a > 0.5f) continue;
+                    bool near = false;
+                    for (int dy = -thickness; dy <= thickness && !near; dy++)
+                    {
+                        for (int dx = -thickness; dx <= thickness; dx++)
+                        {
+                            if (dx * dx + dy * dy > thickness * thickness) continue;
+                            int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+                            if (px[ny * size + nx].a > 0.5f) { near = true; break; }
+                        }
+                    }
+                    if (near) result[y * size + x] = outline;
+                }
+            }
+            System.Array.Copy(result, px, px.Length);
+        }
+
+        /// <summary>
+        /// Pannello "adesivo" in stile cartoon: contorno spesso scuro, riempimento chiaro con riflesso in alto
+        /// e ombra morbida in basso. Va usato come sprite 9-slice e colorato con Image.color.
+        /// </summary>
+        public static Texture2D CartoonPanel(int size = 128, float radius = 40f, float outline = 9f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float half = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float qx = Mathf.Max(0f, Mathf.Abs(x + 0.5f - half) - (half - radius));
+                    float qy = Mathf.Max(0f, Mathf.Abs(y + 0.5f - half) - (half - radius));
+                    float dist = Mathf.Sqrt(qx * qx + qy * qy) - radius; // negativo dentro
+                    float alpha = Mathf.Clamp01(0.5f - dist);
+                    if (alpha <= 0f) { px[y * size + x] = Color.clear; continue; }
+
+                    Color c;
+                    if (dist > -outline)
+                    {
+                        c = InkColor;
+                    }
+                    else
+                    {
+                        float v = y / (float)size; // 0 = basso
+                        float shade = 0.84f + 0.16f * Mathf.SmoothStep(0.1f, 0.7f, v);
+                        // riflesso lucido: striscia chiara vicino al bordo alto interno
+                        float innerTop = (y + 0.5f) - (size - outline - 7f);
+                        bool gloss = innerTop > -9f && innerTop < 0f && Mathf.Abs(x + 0.5f - half) < half - radius * 0.9f;
+                        if (gloss) shade = 1f;
+                        c = new Color(shade, shade, shade, 1f);
+                    }
+                    c.a = alpha;
+                    px[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Cerchio "adesivo" con contorno scuro (distintivi, icone tonde).</summary>
+        public static Texture2D CartoonCircle(int size = 128, float outline = 9f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float c0 = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x + 0.5f - c0) * (x + 0.5f - c0) + (y + 0.5f - c0) * (y + 0.5f - c0));
+                    float dist = d - c0 + 0.5f; // negativo dentro
+                    float alpha = Mathf.Clamp01(0.5f - dist);
+                    if (alpha <= 0f) { px[y * size + x] = Color.clear; continue; }
+                    Color c;
+                    if (dist > -outline) c = InkColor;
+                    else
+                    {
+                        float v = y / (float)size;
+                        float shade = 0.84f + 0.16f * Mathf.SmoothStep(0.1f, 0.75f, v);
+                        // riflesso: piccola ellisse chiara in alto a sinistra
+                        float hx = (x + 0.5f - c0 * 0.72f) / (c0 * 0.38f);
+                        float hy = (y + 0.5f - c0 * 1.45f) / (c0 * 0.2f);
+                        if (hx * hx + hy * hy < 1f) shade = 1f;
+                        c = new Color(shade, shade, shade, 1f);
+                    }
+                    c.a = alpha;
+                    px[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Anello bianco con contorno scuro (mirino).</summary>
+        public static Texture2D RingSprite(int size = 64, float thickness = 7f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float c0 = size * 0.5f;
+            float outer = c0 - 3f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x + 0.5f - c0) * (x + 0.5f - c0) + (y + 0.5f - c0) * (y + 0.5f - c0));
+                    float inRing = Mathf.Clamp01(0.5f - Mathf.Abs(d - (outer - thickness * 0.5f)) + thickness * 0.5f);
+                    float inOutline = Mathf.Clamp01(0.5f - Mathf.Abs(d - (outer - thickness * 0.5f)) + thickness * 0.5f + 2.5f);
+                    Color c = inRing > 0.5f ? Color.white : InkColor;
+                    c.a = Mathf.Max(inRing, inOutline * 0.9f);
+                    px[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
         }
 
         // ------------------------------------------------------------------ Salvataggio

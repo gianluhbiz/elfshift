@@ -64,6 +64,12 @@ Nella barra dei menu in alto è comparso un menu **Elfshift**.
 
 Puoi rilanciare il punto 2 quando vuoi: ricostruisce tutto da zero (le cartelle `…/Generated` vengono rigenerate; i dati in `Assets/Settings/Data` che hai modificato **non** vengono sovrascritti).
 
+## 4b. Grafica e interfaccia
+
+- **Interfaccia in stile cartoon**: pannelli "adesivo" con contorno marrone spesso, font arrotondato (*Lilita One*, licenza OFL, in `Assets/Fonts`), distintivi tondi per punti e biscotti, lettere degli ordini che entrano con un rimbalzo, dondolano, tremano quando il tempo sta per finire, e alla consegna si timbrano con *OK!* e volano via. Scritte come *+100* saltano fuori dai contatori.
+- **Shader stilizzato** (`Assets/Shaders/ElfshiftStylizedLit.shader`): come il shader standard di URP, ma con variazione di colore "dipinta a mano", venatura del legno, ombra di contatto vicino al pavimento e luce di bordo morbida. Se compare un errore di shader nella Console, il costruttore usa da solo il shader standard. Puoi attivarlo/disattivarlo dal menu **Elfshift → Grafica → Shader stilizzato**, poi rilancia la costruzione.
+- La costruzione alza anche le impostazioni di qualità del progetto URP (anti-aliasing 4x, ombre morbide a 4096).
+
 ## 5. Giocare
 
 Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene bloccato al centro della finestra di gioco: **Esc** lo libera (per uscire dalla finestra), un clic lo blocca di nuovo.
@@ -72,12 +78,13 @@ Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene b
 |---|---|
 | **Mouse** (o stick destro) | Guardarsi intorno |
 | **W A S D** o **frecce** (o stick sinistro) | Muoversi |
+| **Maiusc sinistro** (o pressione dello stick sinistro) | **Scattare** (tenuto premuto, solo in avanti) |
 | **Spazio** (o pulsante A) | **Saltare** |
 | **Tasto sinistro del mouse** (o grilletto destro) | **Prendere / posare / consegnare** |
 | **E** o **tasto destro del mouse** (tenuto premuto) — o pulsante X | Costruire sul banco |
 | **Esc** | Libera il cursore dalla finestra di gioco |
 
-**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
+**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro che si allarga e diventa dorato quando puoi interagire. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
 
 **Importante:** si interagisce con ciò che *guardi*. Per usare uno scaffale, un banco o la slitta devi essere vicino **e** rivolto verso di loro.
 

@@ -19,6 +19,9 @@ namespace Elfshift.Player
         [Range(0f, 89f)] [SerializeField] private float maxPitch = 80f;
 
         private float pitch;
+
+        /// <summary>Inclinazione laterale della visuale in gradi (la imposta FirstPersonFeel).</summary>
+        public float Roll { get; set; }
         private bool cursorLocked;
 
         /// <summary>Se falso lo sguardo resta fermo (menu, pausa, sequenze).</summary>
@@ -46,12 +49,16 @@ namespace Elfshift.Player
             if (cursorLocked && input.PausePressed) SetCursorLocked(false);
             else if (!cursorLocked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) SetCursorLocked(true);
 
-            if (!cursorLocked || !LookEnabled) return;
+            if (!cursorLocked || !LookEnabled)
+            {
+                transform.localRotation = Quaternion.Euler(pitch, 0f, Roll);
+                return;
+            }
 
             Vector2 look = input.LookDelta;
             body.Rotate(0f, look.x, 0f, Space.World);
             pitch = Mathf.Clamp(pitch - look.y, minPitch, maxPitch);
-            transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            transform.localRotation = Quaternion.Euler(pitch, 0f, Roll);
         }
 
         private void SetCursorLocked(bool locked)

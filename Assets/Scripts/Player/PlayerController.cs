@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Elfshift.Player
 {
     /// <summary>
-    /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, Spazio salto, relativi alla direzione
+    /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, Maiusc scatto, Spazio salto, relativi alla direzione
     /// in cui guardi. Accelerazione e decelerazione morbide; collisioni con i mobili tramite
     /// CharacterController (nessuna compenetrazione). La rotazione è gestita da <see cref="FirstPersonLook"/>.
     /// </summary>
@@ -15,6 +15,7 @@ namespace Elfshift.Player
 
         [Header("Movimento")]
         [Min(0.5f)] [SerializeField] private float maxSpeed = 4.6f;
+        [Min(1f)] [Tooltip("Di quante volte aumenta la velocità tenendo premuto Maiusc.")] [SerializeField] private float sprintMultiplier = 1.7f;
         [Min(1f)] [SerializeField] private float acceleration = 22f;
         [Min(1f)] [SerializeField] private float deceleration = 30f;
         [SerializeField] private float gravity = -25f;
@@ -33,6 +34,18 @@ namespace Elfshift.Player
 
         public float CurrentSpeed => planarVelocity.magnitude;
 
+        /// <summary>Velocità orizzontale attuale (metri al secondo, nel mondo).</summary>
+        public Vector3 PlanarVelocity => planarVelocity;
+
+        /// <summary>Vero mentre si sta scattando (Maiusc premuto e ci si sta muovendo in avanti).</summary>
+        public bool IsSprinting { get; private set; }
+
+        /// <summary>Vero se i piedi toccano terra.</summary>
+        public bool IsGrounded { get; private set; }
+
+        /// <summary>Velocità massima di camminata, usata per normalizzare le animazioni.</summary>
+        public float WalkSpeed => maxSpeed;
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
@@ -50,12 +63,15 @@ namespace Elfshift.Player
             if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
             Vector3 right = Vector3.Cross(Vector3.up, forward);
 
-            float speedLimit = maxSpeed * Mathf.Max(0f, SpeedMultiplier);
+            // Si scatta solo andando avanti (non di lato o indietro) e non mentre si costruisce.
+            IsSprinting = input.SprintHeld && !MovementLocked && raw.y > 0.3f;
+            float speedLimit = maxSpeed * Mathf.Max(0f, SpeedMultiplier) * (IsSprinting ? sprintMultiplier : 1f);
             Vector3 desired = (right * raw.x + forward * raw.y) * speedLimit;
             float rate = desired.sqrMagnitude > 0.001f ? acceleration : deceleration;
             planarVelocity = Vector3.MoveTowards(planarVelocity, desired, rate * dt);
 
             bool grounded = controller.isGrounded;
+            IsGrounded = grounded;
             if (grounded && verticalVelocity < 0f) verticalVelocity = -2f;
             if (grounded && input.JumpPressed) verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
             verticalVelocity += gravity * dt;
@@ -64,7 +80,7 @@ namespace Elfshift.Player
             controller.Move(motion * dt);
 
             if (visual != null)
-                visual.SetMoveAmount(maxSpeed > 0f ? Mathf.Clamp01(planarVelocity.magnitude / maxSpeed) : 0f);
+                visual.SetMoveAmount(maxSpeed > 0f ? Mathf.Clamp01(planarVelocity.magnitude / (maxSpeed * sprintMultiplier)) : 0f);
         }
 
         /// <summary>Sposta l'elfo (es. a inizio giornata) senza che il CharacterController lo riporti indietro.</summary>

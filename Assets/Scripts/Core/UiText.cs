@@ -16,7 +16,7 @@ namespace Elfshift.Core
         public const string TakeFinishedFirst = "Prima prendi il giocattolo finito";
         public const string NoOrderForThis = "Nessun ordine aperto per questo oggetto";
         public const string OrderExpired = "Ordine scaduto!";
-        public const string Intro = "Segui l'obiettivo in alto: clic sinistro = prendi/posa, E = costruisci, Spazio = salta";
+        public const string Intro = "Segui l'obiettivo in alto. Clic sinistro = prendi, E = costruisci, Maiusc = scatta, Spazio = salta";
         public const string NothingToTake = "Niente da prendere qui: avvicinati a uno scaffale e guardalo";
         public const string NothingToBuild = "Niente da costruire: posa 2 legni sul banco e guardalo";
 

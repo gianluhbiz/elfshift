@@ -119,7 +119,7 @@ namespace Elfshift.EditorTools
                 MeshRenderer r = arm.GetComponent<MeshRenderer>();
                 if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
-            return ModelKit.Empty(cameraTransform, "HandSocketFP", new Vector3(0.0f, -0.3f, 0.62f), new Vector3(0f, 0f, 0f));
+            return ModelKit.Empty(root, "HandSocketFP", new Vector3(0.0f, -0.3f, 0.62f), new Vector3(0f, 0f, 0f));
         }
 
         private static Transform BuildLeg(Transform root, string name, float x)
