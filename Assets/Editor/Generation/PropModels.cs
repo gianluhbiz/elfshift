@@ -458,7 +458,7 @@ namespace Elfshift.EditorTools
                     float x = -length / 2f + i * step;
                     mb.Import("Prop_FencePost", new Vector3(x, 0f, 0f), new Vector3(0f, (i * 47) % 360, 0f));
                     if (i < posts - 1)
-                        mb.Import("Prop_FenceSpan", MeshBuilder.Xf(new Vector3(x + step / 2f, 0f, 0f), new Vector3(0f, i % 2 == 0 ? 0f : 180f, 0f), new Vector3(step, 1f, 1f)));
+                        mb.Import("Prop_FenceSpan", MeshBuilder.Xf(new Vector3(x + step / 2f, 0f, 0f), Vector3.zero, new Vector3(step, 1f, 1f)));
                 }
                 ModelKit.Part(root, "Mesh", mb);
                 return root.gameObject;

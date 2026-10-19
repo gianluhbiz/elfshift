@@ -117,6 +117,12 @@ namespace Elfshift.EditorTools
         private readonly List<string> materialKeys = new List<string>();
 
         public IReadOnlyList<string> MaterialKeys => materialKeys;
+
+        /// <summary>
+        /// Sostituzione facoltativa dei materiali: ogni nome della tavolozza passa da qui prima di essere usato.
+        /// Serve per esempio a fare la versione "grezza" (tutta legno chiaro) di un giocattolo colorato.
+        /// </summary>
+        public System.Func<string, string> Remap { get; set; }
         public IReadOnlyList<Vector3> Vertices => verts;
         public IReadOnlyList<List<int>> Triangles => tris;
         public int VertexCount => verts.Count;
@@ -124,6 +130,7 @@ namespace Elfshift.EditorTools
         /// <summary>Restituisce l'indice del sotto-mesh per il materiale con questo nome (lo crea se serve).</summary>
         public int Sub(string materialKey)
         {
+            if (Remap != null) materialKey = Remap(materialKey);
             int index = materialKeys.IndexOf(materialKey);
             if (index >= 0) return index;
             materialKeys.Add(materialKey);

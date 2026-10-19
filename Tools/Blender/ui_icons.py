@@ -96,7 +96,34 @@ def icon_cookie():
     setup_render(os.path.join(OUT, "icon_cookie.png"), elev=55.0)
 
 
+def icon_flame():
+    """Fiammella: goccia arancione con cuore giallo, morbida."""
+    k.reset()
+    outer = k.lathe("Fiamma", [(0, -0.9), (0.42, -0.75), (0.62, -0.35), (0.6, 0.05), (0.42, 0.45), (0.2, 0.8), (0.0, 1.15)], mat="ClothOrange", segments=40)
+    outer.scale = (1, 0.55, 1)
+    k.subdivide(outer, 2)
+    inner = k.lathe("Cuore", [(0, -0.75), (0.26, -0.62), (0.36, -0.3), (0.32, 0.05), (0.18, 0.35), (0.0, 0.62)], mat="ClothYellow", segments=32, loc=(0, -0.2, -0.05))
+    inner.scale = (1, 0.5, 1)
+    k.subdivide(inner, 2)
+    setup_render(os.path.join(OUT, "icon_flame.png"), ortho=2.5, elev=8.0)
+
+
+def icon_letter():
+    """Letterina: busta color crema leggermente inclinata con sigillo di ceralacca rosso."""
+    k.reset()
+    env = k.box("Busta", (1.7, 0.08, 1.1), (0, 0, 0), mat="Cream", bevel=0.04, segments=3)
+    # lembo triangolare
+    flap = k.extrude_outline("Lembo", [(-0.83, 0.52), (0.83, 0.52), (0.0, -0.12)], 0.03, loc=(0, -0.055, 0.0), mat="Plaster", bevel=0.015)
+    seal = k.cylinder("Sigillo", 0.2, 0.06, (0, -0.1, -0.1), rot=(90, 0, 0), mat="RedSanta", bevel=0.025, verts=24, segments=3)
+    k.wobble(seal, 0.02, 0.3, levels=1)
+    for o in (env, flap, seal):
+        o.rotation_euler.y += math.radians(-8)
+    setup_render(os.path.join(OUT, "icon_letter.png"), ortho=2.3, elev=6.0)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     icon_star()
     icon_cookie()
+    icon_flame()
+    icon_letter()

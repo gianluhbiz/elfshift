@@ -109,6 +109,11 @@ namespace Elfshift.EditorTools
             // --- aggiunte gruppo personaggi e oggetti ---
             { "FurWhite",   M("#F3EDE2", 0.08f) },
             // --- aggiunte struttura e interfaccia ---
+            { "ReindeerBrown", M("#9C6B45", 0.18f) },
+            { "ReindeerDark",  M("#6B4630", 0.18f) },
+            { "Antler",     M("#D8C29C", 0.25f) },
+            { "Hay",        M("#E2C46E", 0.12f) },
+            { "HayDark",    M("#B8954A", 0.12f) },
         };
     }
 }

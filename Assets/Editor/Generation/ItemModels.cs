@@ -82,6 +82,15 @@ namespace Elfshift.EditorTools
             }
 
             // --- forma di riserva (se manca il modello di Blender) ---
+            AddTrainFallback(mb);
+            ModelKit.Part(root, "Mesh", mb);
+            return root.gameObject;
+        }
+
+
+        /// <summary>Trenino fatto di forme semplici (se manca il modello di Blender).</summary>
+        private static void AddTrainFallback(MeshBuilder mb)
+        {
             // telaio
             mb.Box("WoodDeep", new Vector3(0f, 0.105f, 0f), new Vector3(0.2f, 0.05f, 0.92f), 0.015f);
             // --- locomotiva (z positivo)
@@ -118,8 +127,114 @@ namespace Elfshift.EditorTools
                     mb.CylC("Gold", new Vector3(x + side * 0.012f, 0.07f, wheelZ[i]), 0.028f, 0.04f, 0.008f, new Vector3(0f, 0f, 90f), 10);
                 }
             }
+        }
+
+        // ============================================================================ nuove materie prime
+        /// <summary>Rotolo di stoffa (materia prima per l'orsetto).</summary>
+        public static GameObject BuildCloth(Transform parent)
+        {
+            ModelKit.Begin("Item_Cloth");
+            Transform root = ModelKit.Empty(parent, "Item_Cloth", Vector3.zero);
+            MeshBuilder mb = new MeshBuilder();
+            if (!mb.Import("Item_Cloth", Vector3.zero))
+            {
+                mb.CylC("RedSanta", new Vector3(0f, 0.11f, 0f), 0.11f, 0.5f, 0.02f, new Vector3(0f, 0f, 90f), 20);
+                mb.Ring("Gold", new Vector3(0f, 0.11f, 0f), 0.115f, 0.008f, new Vector3(0f, 0f, 90f), 20, 6);
+            }
             ModelKit.Part(root, "Mesh", mb);
             return root.gameObject;
         }
+
+        /// <summary>Pacchetto di lamiere con ingranaggio (materia prima per il robot).</summary>
+        public static GameObject BuildMetal(Transform parent)
+        {
+            ModelKit.Begin("Item_Metal");
+            Transform root = ModelKit.Empty(parent, "Item_Metal", Vector3.zero);
+            MeshBuilder mb = new MeshBuilder();
+            if (!mb.Import("Item_Metal", Vector3.zero))
+            {
+                mb.Box("MetalLight", new Vector3(0f, 0.02f, 0f), new Vector3(0.44f, 0.03f, 0.28f), 0.008f);
+                mb.Box("MetalDark", new Vector3(0f, 0.055f, 0f), new Vector3(0.44f, 0.03f, 0.28f), 0.008f);
+                FurnitureModels.AddGear(mb, new Vector3(0.05f, 0.085f, 0f), 0.08f, "Gold");
+            }
+            ModelKit.Part(root, "Mesh", mb);
+            return root.gameObject;
+        }
+
+        // ============================================================================ giocattoli nelle varie fasi
+        /// <summary>I tre giocattoli del laboratorio.</summary>
+        public enum ToyKind { Train, Teddy, Robot }
+
+        /// <summary>Fasi della lavorazione: grezzo (appena costruito), dipinto/decorato.</summary>
+        public enum ToyStage { Raw, Painted }
+
+        /// <summary>
+        /// Giocattolo in una fase della lavorazione. La versione grezza usa lo stesso modello di quella finita
+        /// ma con i colori "naturali" (legno chiaro, stoffa grezza, latta): così si vede subito cosa manca.
+        /// </summary>
+        public static GameObject BuildToy(Transform parent, ToyKind kind, ToyStage stage)
+        {
+            string name = "Item_" + kind + (stage == ToyStage.Raw ? "Raw" : "Painted");
+            ModelKit.Begin(name);
+            Transform root = ModelKit.Empty(parent, name, Vector3.zero);
+            MeshBuilder mb = new MeshBuilder();
+            if (stage == ToyStage.Raw) mb.Remap = RawRemap(kind);
+            switch (kind)
+            {
+                case ToyKind.Train:
+                    if (!mb.Import("Item_Train", Vector3.zero)) AddTrainFallback(mb);
+                    break;
+                case ToyKind.Teddy:
+                    DecorModels.AddTeddy(mb, Vector3.zero, 0.62f, "CookieBrown", 0f);
+                    break;
+                default:
+                    DecorModels.AddRobot(mb, Vector3.zero, 0.6f, "ClothBlue", 0f);
+                    break;
+            }
+            ModelKit.Part(root, "Mesh", mb);
+            return root.gameObject;
+        }
+
+        /// <summary>Pacco regalo pronto per la slitta: carta e nastro con i colori del giocattolo che contiene.</summary>
+        public static GameObject BuildGift(Transform parent, ToyKind kind)
+        {
+            string name = "Item_" + kind + "Gift";
+            ModelKit.Begin(name);
+            Transform root = ModelKit.Empty(parent, name, Vector3.zero);
+            MeshBuilder mb = new MeshBuilder();
+            switch (kind)
+            {
+                case ToyKind.Train:
+                    FurnitureModels.AddGift(mb, Vector3.zero, new Vector3(0.46f, 0.3f, 0.36f), "RedSanta", "Gold", 0f);
+                    break;
+                case ToyKind.Teddy:
+                    FurnitureModels.AddGift(mb, Vector3.zero, new Vector3(0.38f, 0.38f, 0.38f), "ClothPink", "Cream", 0f);
+                    break;
+                default:
+                    FurnitureModels.AddGift(mb, Vector3.zero, new Vector3(0.36f, 0.42f, 0.36f), "ClothBlue", "Gold", 0f);
+                    break;
+            }
+            ModelKit.Part(root, "Mesh", mb);
+            return root.gameObject;
+        }
+
+        /// <summary>Colori della versione grezza di ogni giocattolo.</summary>
+        private static System.Func<string, string> RawRemap(ToyKind kind)
+        {
+            switch (kind)
+            {
+                case ToyKind.Train:
+                    // legno naturale: le parti scure restano scure, tutto il resto diventa legno chiaro
+                    return key => key == "WoodDeep" || key == "WoodDark" || key == "Iron" ? "WoodDark" : "WoodLight";
+                case ToyKind.Teddy:
+                    // stoffa grezza color crema, senza occhi né fiocco
+                    return key => "Cream";
+                default:
+                    // latta non verniciata
+                    return key => key == "MetalDark" || key == "Iron" || key == "EyeDark" || key == "Black" ? "MetalDark" : "MetalLight";
+            }
+        }
+
+
     }
 }

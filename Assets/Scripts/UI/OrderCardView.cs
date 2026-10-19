@@ -51,7 +51,7 @@ namespace Elfshift.UI
             age = 0f;
             finishing = false;
             seed = UnityEngine.Random.value * 10f;
-            if (titleText != null) titleText.text = newOrder.Definition.RequestedItem.DisplayName;
+            if (titleText != null) titleText.text = newOrder.Definition.LetterItem.DisplayName;
             if (childText != null) childText.text = UiText.ForChild(newOrder.ChildName);
             if (icon != null)
             {

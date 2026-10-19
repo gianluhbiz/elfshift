@@ -22,6 +22,9 @@ namespace Elfshift.Production
         private Coroutine bounceRoutine;
 
         public bool CanGive => item != null;
+
+        /// <summary>L'oggetto che questo scaffale fornisce.</summary>
+        public ItemDefinition Item => item;
         public string PickupPrompt => pickupPrompt;
 
         private void Awake()

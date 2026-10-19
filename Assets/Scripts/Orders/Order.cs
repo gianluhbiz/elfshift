@@ -30,12 +30,15 @@ namespace Elfshift.Orders
         public readonly int Points;
         public readonly int Cookies;
         public readonly int SpeedBonus;
+        /// <summary>Moltiplicatore della serie di consegne applicato ai punti (1 = nessuno).</summary>
+        public readonly float Multiplier;
 
-        public OrderResult(int points, int cookies, int speedBonus)
+        public OrderResult(int points, int cookies, int speedBonus, float multiplier)
         {
             Points = points;
             Cookies = cookies;
             SpeedBonus = speedBonus;
+            Multiplier = multiplier;
         }
     }
 }

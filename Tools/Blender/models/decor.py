@@ -186,7 +186,7 @@ def teddy(fur):
             k.tube("Coda%d" % s, [(s * 0.01, -0.13, 0.335), (s * 0.03, -0.14, 0.3), (s * 0.04, -0.138, 0.275)], 0.011, mat="RedSanta", sides=6, radius_end=0.007)
         k.sphere("Nodo", 0.018, loc=(0, -0.135, 0.343), mat="RedDeep", segments=10, rings=6)
         k.torus("Collare", 0.105, 0.012, loc=(0, -0.01, 0.348), mat="RedSanta", major_seg=16, minor_seg=4).scale = (1.0, 0.92, 1.0)
-        return {"ao_distance": 0.12, "ao_samples": 32}
+        return {"ao_distance": 0.12, "ao_samples": 32, "sharp_angle": 75.0}
     return build
 
 
@@ -355,7 +355,7 @@ def beach_ball():
             cap = k.sphere("Tappo%d" % sz, r * 0.2, loc=(0, 0, 0), scale=(1, 1, 0.35), mat="Snow", segments=12, rings=4)
             cap.parent = obj
             cap.location = (0, 0, sz * r * 0.975)
-        return {"ao_distance": 0.08, "ao_samples": 32}
+        return {"ao_distance": 0.08, "ao_samples": 32, "sharp_angle": 75.0}
     return build
 
 
@@ -856,7 +856,7 @@ def wall_clock():
         frame.scale = (1, 1, 0.75)
         for i in range(32):  # perline intagliate sulla cornice
             a = 2 * math.pi * i / 32
-            k.sphere("Perla%d" % i, 0.014, loc=U(math.cos(a) * 0.47, math.sin(a) * 0.47, 0.05), mat="WoodDark", segments=8, rings=6)
+            k.sphere("Perla%d" % i, 0.014, loc=U(math.cos(a) * 0.47, math.sin(a) * 0.47, 0.05), mat="WoodDark", segments=6, rings=4)
         k.torus("Lunetta", 0.37, 0.013, loc=U(0, 0, 0.08), rot=(90, 0, 0), mat="Gold", major_seg=56, minor_seg=6)
         k.cylinder("Quadrante", 0.37, 0.02, loc=U(0, 0, 0.065), rot=(90, 0, 0), mat="Cream", bevel=0.004, verts=56)
         k.torus("Anellino", 0.3, 0.003, loc=U(0, 0, 0.076), rot=(90, 0, 0), mat="WoodDeep", major_seg=48, minor_seg=4)
@@ -872,7 +872,7 @@ def wall_clock():
             if i % 5 == 0:
                 continue
             a = i * math.pi / 30
-            k.sphere("Minuto%d" % i, 0.005, loc=U(math.sin(a) * 0.355, math.cos(a) * 0.355, 0.077), mat="WoodDeep", segments=6, rings=4)
+            k.sphere("Minuto%d" % i, 0.005, loc=U(math.sin(a) * 0.355, math.cos(a) * 0.355, 0.077), mat="WoodDeep", segments=4, rings=3)
         # lancette sagomate (ore: picca; minuti: sottile)
         hour = [(0.0, -0.04), (0.012, -0.03), (0.01, 0.12), (0.03, 0.15), (0.0, 0.2), (-0.03, 0.15), (-0.01, 0.12), (-0.012, -0.03)]
         mins = [(0.0, -0.05), (0.008, -0.04), (0.006, 0.24), (0.0, 0.29), (-0.006, 0.24), (-0.008, -0.04)]

@@ -83,6 +83,8 @@ namespace Elfshift.Player
 
             IItemSource bestSource = null;
             float bestSourceSq = float.MaxValue;
+            IUsable bestUsable = null;
+            float bestUsableSq = float.MaxValue;
             IItemReceiver acceptor = null;
             float acceptorSq = float.MaxValue;
             IItemReceiver rejector = null;
@@ -128,6 +130,12 @@ namespace Elfshift.Player
                         bestSource = source;
                         bestSourceSq = sq;
                     }
+                    IUsable usable = candidate as IUsable;
+                    if (usable != null && usable.CanUse && sq < bestUsableSq)
+                    {
+                        bestUsable = usable;
+                        bestUsableSq = sq;
+                    }
                 }
                 else
                 {
@@ -156,9 +164,16 @@ namespace Elfshift.Player
                 }
             }
 
+            // A mani vuote vince la cosa più vicina tra "da prendere" e "da usare".
+            if (bestUsable != null && bestSource != null)
+            {
+                if (bestUsableSq <= bestSourceSq) bestSource = null;
+                else bestUsable = null;
+            }
+
             // ---- 2) Suggerimenti a schermo --------------------------------------------------
             string pickupPrompt = null;
-            if (!hasItem) pickupPrompt = bestSource != null ? bestSource.PickupPrompt : null;
+            if (!hasItem) pickupPrompt = bestSource != null ? bestSource.PickupPrompt : (bestUsable != null ? bestUsable.UsePrompt : null);
             else pickupPrompt = acceptor != null ? acceptor.PlacePrompt : UiText.Drop;
             string interactPrompt = bestHold != null ? bestHold.HoldPrompt : null;
             PublishPrompts(pickupPrompt, interactPrompt);
@@ -183,6 +198,11 @@ namespace Elfshift.Player
                             carrier.Hold(taken);
                             if (visual != null) visual.PlayPickup();
                         }
+                    }
+                    else if (bestUsable != null)
+                    {
+                        bestUsable.Use();
+                        if (visual != null) visual.PlayPickup();
                     }
                     else
                     {

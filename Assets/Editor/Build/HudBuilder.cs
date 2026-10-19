@@ -1,6 +1,8 @@
 using Elfshift.Core;
 using Elfshift.Orders;
 using Elfshift.Player;
+using Elfshift.Production;
+using Elfshift.Progression;
 using Elfshift.UI;
 using UnityEditor;
 using UnityEngine;
@@ -16,9 +18,12 @@ namespace Elfshift.EditorTools
         public PlayerInteractor Interactor;
         public Carrier Carrier;
         public ItemIconService Icons;
-        public Elfshift.Production.CraftingStation Bench;
-        public Transform ShelfAnchor;
-        public Transform SleighAnchor;
+        public CraftingStation[] Stations = new CraftingStation[0];
+        public ItemShelf[] Shelves = new ItemShelf[0];
+        public Sleigh Sleigh;
+        public Mailbox Mailbox;
+        public Fireplace Fireplace;
+        public DayCycle Day;
         public Transform MarkerObject;
     }
 
@@ -51,6 +56,8 @@ namespace Elfshift.EditorTools
         private static Sprite keycap;    // tasto della tastiera
         private static Sprite cookieSprite;
         private static Sprite starSprite;
+        private static Sprite flameSprite;
+        private static Sprite letterSprite;
         private static Font font;        // Nunito SemiBold: testi
         private static Font fontBold;    // Nunito Bold: numeri e titoli
 
@@ -89,6 +96,11 @@ namespace Elfshift.EditorTools
             InteractionPromptView prompts = BuildPrompts(safe, src, crosshair);
             CarriedItemView carried = BuildCarried(safe, src);
             BuildGoalBanner(safe, src);
+            BuildDayClock(safe, src);
+            BuildWarmth(safe, src);
+            BuildMailIndicator(safe, src);
+            BuildStreak(safe, src);
+            BuildResults(canvasObject.transform, src);
 
             OrderBarView bar = ordersContainer.gameObject.AddComponent<OrderBarView>();
             Wire.Ref(bar, "orders", src.Orders);
@@ -106,6 +118,8 @@ namespace Elfshift.EditorTools
             Wire.Ref(hud, "floatingTexts", spawner);
             Wire.Ref(hud, "pointsIconPop", pointsPop);
             Wire.Ref(hud, "cookiesIconPop", cookiesPop);
+            Wire.Ref(hud, "fireplace", src.Fireplace);
+            Wire.Ref(hud, "day", src.Day);
 
             if (prompts == null || carried == null) Debug.LogWarning("[Elfshift] HUD incompleto.");
             return canvasObject;
@@ -128,6 +142,10 @@ namespace Elfshift.EditorTools
             if (starSprite == null) starSprite = SaveSprite(ProceduralTextures.Star(128), ui + "/icon_star.png", Vector4.zero);
             cookieSprite = LoadIcon("Assets/UI/Icons/icon_cookie.png");
             if (cookieSprite == null) cookieSprite = SaveSprite(ProceduralTextures.Cookie(128), ui + "/icon_cookie.png", Vector4.zero);
+            flameSprite = LoadIcon("Assets/UI/Icons/icon_flame.png");
+            if (flameSprite == null) flameSprite = starSprite;
+            letterSprite = LoadIcon("Assets/UI/Icons/icon_letter.png");
+            if (letterSprite == null) letterSprite = starSprite;
 
             font = LoadFont("Assets/Fonts/Nunito-SemiBold.ttf");
             fontBold = LoadFont("Assets/Fonts/Nunito-Bold.ttf");
@@ -391,18 +409,203 @@ namespace Elfshift.EditorTools
             Wire.Float(labelPop, "duration", 0.3f);
 
             // Il componente sta su un oggetto sempre attivo (il pannello può nascondersi da solo).
-            TutorialHintView view = parent.gameObject.AddComponent<TutorialHintView>();
-            Wire.Ref(view, "carrier", src.Carrier);
-            Wire.Ref(view, "bench", src.Bench);
-            Wire.Ref(view, "session", src.Session);
+            GoalGuideView view = parent.gameObject.AddComponent<GoalGuideView>();
             Wire.Ref(view, "orders", src.Orders);
+            Wire.Ref(view, "carrier", src.Carrier);
+            Wire.Refs(view, "stations", src.Stations);
+            Wire.Refs(view, "shelves", src.Shelves);
+            Wire.Ref(view, "sleigh", src.Sleigh);
+            Wire.Ref(view, "mailbox", src.Mailbox);
+            Wire.Ref(view, "fireplace", src.Fireplace);
             Wire.Ref(view, "root", banner.gameObject);
             Wire.Ref(view, "label", label);
             Wire.Ref(view, "labelPop", labelPop);
             Wire.Ref(view, "marker", src.MarkerObject);
-            Wire.Ref(view, "shelfTarget", src.ShelfAnchor);
-            Wire.Ref(view, "benchTarget", src.Bench != null ? src.Bench.transform : null);
-            Wire.Ref(view, "sleighTarget", src.SleighAnchor);
+        }
+
+        // ================================================================== giornata, calore, posta, serie
+        /// <summary>In alto a destra: "Giorno 1" e il tempo che resta, con un piccolo quadrante che si svuota.</summary>
+        private static void BuildDayClock(RectTransform parent, HudSources src)
+        {
+            RectTransform pill = NewRect("DayClock", parent);
+            Anchor(pill, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -2f), new Vector2(176f, 48f));
+            AddPanel(pill, Paper, 24f);
+            pill.gameObject.AddComponent<UiPop>();
+
+            RectTransform dialBack = NewRect("DialBack", pill);
+            Anchor(dialBack, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(26f, 0f), new Vector2(32f, 32f));
+            Image back = dialBack.gameObject.AddComponent<Image>();
+            back.sprite = disc;
+            back.color = Track;
+            RectTransform dialRt = NewRect("Dial", dialBack);
+            Stretch(dialRt, 3f);
+            Image dial = dialRt.gameObject.AddComponent<Image>();
+            dial.sprite = disc;
+            dial.color = Amber;
+            dial.type = Image.Type.Filled;
+            dial.fillMethod = Image.FillMethod.Radial360;
+            dial.fillOrigin = 2; // dall'alto
+            dial.fillClockwise = true;
+            dial.fillAmount = 1f;
+
+            Text dayLabel = NewText("DayLabel", pill, UiText.DayTitle + " 1", 13, InkSoft, TextAnchor.UpperLeft, true, false);
+            SetRect(dayLabel.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 1f), new Vector2(50f, 0f), new Vector2(-10f, -5f));
+            Text time = NewText("Time", pill, "8:00", 21, Ink, TextAnchor.LowerLeft, true, false);
+            SetRect(time.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0f), new Vector2(50f, 4f), new Vector2(-10f, 0f));
+
+            DayClockView view = pill.gameObject.AddComponent<DayClockView>();
+            Wire.Ref(view, "day", src.Day);
+            Wire.Ref(view, "dayLabel", dayLabel);
+            Wire.Ref(view, "timeLabel", time);
+            Wire.Ref(view, "dial", dial);
+        }
+
+        /// <summary>Sotto l'orologio: fiammella e barretta del calore del camino.</summary>
+        private static void BuildWarmth(RectTransform parent, HudSources src)
+        {
+            RectTransform pill = NewRect("Warmth", parent);
+            Anchor(pill, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -60f), new Vector2(176f, 40f));
+            AddPanel(pill, Paper, 20f);
+
+            RectTransform icon = NewRect("Flame", pill);
+            Anchor(icon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(24f, 1f), new Vector2(30f, 30f));
+            Image iconImage = icon.gameObject.AddComponent<Image>();
+            iconImage.sprite = flameSprite;
+            iconImage.preserveAspect = true;
+
+            RectTransform bar = NewRect("Bar", pill);
+            SetRect(bar, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0.5f), new Vector2(46f, -5f), new Vector2(-16f, 5f));
+            Image barBg = bar.gameObject.AddComponent<Image>();
+            barBg.sprite = plain;
+            barBg.type = Image.Type.Sliced;
+            barBg.pixelsPerUnitMultiplier = PanelSpriteRadius / 5f;
+            barBg.color = Track;
+            RectTransform fill = NewRect("Fill", bar);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0.7f, 1f);
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
+            Image fillImage = fill.gameObject.AddComponent<Image>();
+            fillImage.sprite = plain;
+            fillImage.type = Image.Type.Sliced;
+            fillImage.pixelsPerUnitMultiplier = PanelSpriteRadius / 5f;
+            fillImage.color = Amber;
+
+            WarmthView view = pill.gameObject.AddComponent<WarmthView>();
+            Wire.Ref(view, "fireplace", src.Fireplace);
+            Wire.Ref(view, "fill", fill);
+            Wire.Ref(view, "fillImage", fillImage);
+            Wire.Ref(view, "icon", icon);
+            if (src.Fireplace == null) pill.gameObject.SetActive(false);
+        }
+
+        /// <summary>Busta con il numero di letterine che aspettano nella cassetta (sotto il calore).</summary>
+        private static void BuildMailIndicator(RectTransform parent, HudSources src)
+        {
+            GameObject holder = NewRect("MailHolder", parent).gameObject;
+            RectTransform holderRt = (RectTransform)holder.transform;
+            Stretch(holderRt, 0f);
+            RectTransform pill = NewRect("Mail", holderRt);
+            Anchor(pill, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -110f), new Vector2(96f, 40f));
+            AddPanel(pill, Paper, 20f);
+            UiPop pop = pill.gameObject.AddComponent<UiPop>();
+            RectTransform icon = NewRect("Letter", pill);
+            Anchor(icon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(26f, 0f), new Vector2(32f, 32f));
+            Image iconImage = icon.gameObject.AddComponent<Image>();
+            iconImage.sprite = letterSprite;
+            iconImage.preserveAspect = true;
+            Text count = NewText("Count", pill, "1", 20, Red, TextAnchor.MiddleLeft, true, false);
+            SetRect(count.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), new Vector2(50f, 0f), new Vector2(-8f, -1f));
+
+            MailIndicatorView view = holder.AddComponent<MailIndicatorView>();
+            Wire.Ref(view, "orders", src.Orders);
+            Wire.Ref(view, "root", pill.gameObject);
+            Wire.Ref(view, "countText", count);
+            Wire.Ref(view, "pop", pop);
+            pill.gameObject.SetActive(false);
+        }
+
+        /// <summary>Sotto punti e biscotti: "Serie x1.5" quando si consegna più volte di fila.</summary>
+        private static void BuildStreak(RectTransform parent, HudSources src)
+        {
+            GameObject holder = NewRect("StreakHolder", parent).gameObject;
+            Stretch((RectTransform)holder.transform, 0f);
+            RectTransform pill = NewRect("Streak", (RectTransform)holder.transform);
+            Anchor(pill, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -60f), new Vector2(132f, 36f));
+            AddPanel(pill, Red, 18f);
+            UiPop pop = pill.gameObject.AddComponent<UiPop>();
+            Text label = NewText("Label", pill, UiText.StreakTitle + " x1.25", 17, White, TextAnchor.MiddleCenter, true, false);
+            Stretch(label.rectTransform, 2f);
+
+            StreakView view = holder.AddComponent<StreakView>();
+            Wire.Ref(view, "session", src.Session);
+            Wire.Ref(view, "root", pill.gameObject);
+            Wire.Ref(view, "label", label);
+            Wire.Ref(view, "pop", pop);
+            pill.gameObject.SetActive(false);
+        }
+
+        /// <summary>Riepilogo di fine giornata al centro dello schermo (nascosto finché la giornata non finisce).</summary>
+        private static void BuildResults(Transform canvas, HudSources src)
+        {
+            GameObject holder = NewRect("ResultsHolder", canvas).gameObject;
+            Stretch((RectTransform)holder.transform, 0f);
+
+            RectTransform dim = NewRect("Results", (RectTransform)holder.transform);
+            Stretch(dim, 0f);
+            Image dimImage = dim.gameObject.AddComponent<Image>();
+            dimImage.color = new Color(0.08f, 0.06f, 0.1f, 0.45f);
+            CanvasGroup group = dim.gameObject.AddComponent<CanvasGroup>();
+
+            RectTransform card = NewRect("Card", dim);
+            Anchor(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(540f, 360f));
+            AddPanel(card, Paper, 28f);
+
+            Text title = NewText("Title", card, UiText.ResultsTitle, 30, Ink, TextAnchor.UpperCenter, true, false);
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(20f, -66f), new Vector2(-20f, -24f));
+
+            Image[] stars = new Image[3];
+            for (int i = 0; i < 3; i++)
+            {
+                RectTransform star = NewRect("Star" + (i + 1), card);
+                float size = i == 1 ? 84f : 66f;
+                Anchor(star, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 92f, i == 1 ? -124f : -132f), new Vector2(size, size));
+                Image img = star.gameObject.AddComponent<Image>();
+                img.sprite = starSprite;
+                img.preserveAspect = true;
+                stars[i] = img;
+            }
+
+            Text points = NewText("Points", card, "0", 44, Ink, TextAnchor.MiddleCenter, true, false);
+            SetRect(points.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(20f, -232f), new Vector2(-20f, -176f));
+            Text pointsCaption = NewText("PointsCaption", card, "punti", 15, InkSoft, TextAnchor.UpperCenter, false, false);
+            SetRect(pointsCaption.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(20f, -256f), new Vector2(-20f, -232f));
+            Text details = NewText("Details", card, "", 16, InkSoft, TextAnchor.MiddleCenter, false, false);
+            SetRect(details.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(20f, 62f), new Vector2(-20f, 92f));
+
+            RectTransform hintPill = NewRect("HintPill", card);
+            Anchor(hintPill, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(360f, 36f));
+            Image hintBg = hintPill.gameObject.AddComponent<Image>();
+            hintBg.sprite = plain;
+            hintBg.type = Image.Type.Sliced;
+            hintBg.pixelsPerUnitMultiplier = PanelSpriteRadius / 18f;
+            hintBg.color = Green;
+            Text hint = NewText("Hint", hintPill, UiText.ResultsHint, 16, White, TextAnchor.MiddleCenter, true, false);
+            Stretch(hint.rectTransform, 0f);
+            UiWobble wobble = hintPill.gameObject.AddComponent<UiWobble>();
+            Wire.Float(wobble, "rotationDegrees", 0f);
+            Wire.Float(wobble, "scaleAmount", 0.03f);
+            Wire.Float(wobble, "floatPixels", 0f);
+
+            ResultsView view = holder.AddComponent<ResultsView>();
+            Wire.Ref(view, "day", src.Day);
+            Wire.Ref(view, "session", src.Session);
+            Wire.Ref(view, "root", dim.gameObject);
+            Wire.Ref(view, "group", group);
+            Wire.Ref(view, "pointsText", points);
+            Wire.Ref(view, "detailsText", details);
+            Wire.Refs(view, "stars", stars);
+            dim.gameObject.SetActive(false);
         }
 
         // ================================================================== suggerimenti contestuali

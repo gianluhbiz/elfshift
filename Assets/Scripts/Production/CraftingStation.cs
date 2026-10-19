@@ -38,6 +38,21 @@ namespace Elfshift.Production
         /// <summary>Quanti ingredienti ci sono sul banco.</summary>
         public int InputCount => inputItems.Count;
 
+        /// <summary>Tipo di banco (costruzione, pittura, pacchi).</summary>
+        public StationType Type => stationType;
+
+        /// <summary>Le ricette che questo banco sa fare.</summary>
+        public RecipeDefinition[] Recipes => recipes;
+
+        /// <summary>Gli ingredienti posati in questo momento.</summary>
+        public IReadOnlyList<ItemDefinition> Inputs => inputDefinitions;
+
+        /// <summary>Il prodotto finito in attesa di essere preso (o null).</summary>
+        public ItemDefinition OutputDefinition => outputItem != null ? outputItem.Definition : null;
+
+        /// <summary>La ricetta pronta da lavorare (o null).</summary>
+        public RecipeDefinition ReadyRecipe => readyRecipe;
+
         /// <summary>Vero se sul banco c'è un prodotto finito da prendere.</summary>
         public bool HasOutput => outputItem != null;
 
@@ -158,7 +173,7 @@ namespace Elfshift.Production
         private void RefreshRecipe()
         {
             readyRecipe = outputItem == null ? RecipeMatcher.FindComplete(recipes, stationType, inputDefinitions) : null;
-            holdPrompt = readyRecipe != null ? UiText.HoldToBuild(readyRecipe.Output.DisplayName) : string.Empty;
+            holdPrompt = readyRecipe != null ? UiText.HoldToCraft(stationType, readyRecipe.Output.DisplayName) : string.Empty;
 
             if (outputItem != null && outputItem.Definition != null)
                 pickupPrompt = UiText.Take(outputItem.Definition.DisplayName);

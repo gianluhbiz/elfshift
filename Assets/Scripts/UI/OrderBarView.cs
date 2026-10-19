@@ -54,7 +54,7 @@ namespace Elfshift.UI
         private void AddCard(Order order)
         {
             OrderCardView card = Instantiate(cardPrefab, container);
-            Texture icon = icons != null ? icons.GetIcon(order.Definition.RequestedItem) : null;
+            Texture icon = icons != null ? icons.GetIcon(order.Definition.LetterItem) : null;
             card.Bind(order, icon);
             cards.Add(card);
         }

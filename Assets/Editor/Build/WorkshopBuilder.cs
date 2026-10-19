@@ -5,6 +5,7 @@ using Elfshift.Interaction;
 using Elfshift.Orders;
 using Elfshift.Player;
 using Elfshift.Production;
+using Elfshift.Progression;
 using Elfshift.UI;
 using Elfshift.Vfx;
 using UnityEditor;
@@ -17,19 +18,27 @@ using UnityEngine.SceneManagement;
 namespace Elfshift.EditorTools
 {
     /// <summary>
-    /// Costruisce da zero tutta la Fase 1: texture, materiali, modelli 3D, prefab, dati di gioco,
-    /// scena del laboratorio, luci, effetti e interfaccia. È ripetibile: puoi rilanciarlo quando vuoi.
+    /// Costruisce da zero tutta la "Bottega degli Elfi": texture, materiali, modelli 3D, prefab, dati di gioco,
+    /// scena, luci, effetti e interfaccia. È ripetibile: puoi rilanciarlo quando vuoi.
+    ///
+    /// Il percorso di lavoro gira in senso orario:
+    ///   cassetta della posta (cortile) → magazzino (legno, stoffa, metallo) → banco di costruzione →
+    ///   banco dei colori → banco dei pacchi → porta → slitta nel cortile.
+    /// In più: il camino va tenuto acceso con la legna (altrimenti si lavora piano).
     /// </summary>
     public static class WorkshopBuilder
     {
         public const string ScenePath = AssetUtil.SceneFolder + "/Workshop.unity";
 
-        // Posizioni principali (metri). Il salone va da x=-14 a 14 e da z=-10 a 10; la banchina continua oltre x=14.
-        private static readonly Vector3 PlayerStart = new Vector3(-6f, 0f, -5f);
-        private static readonly Vector3 ConstructionBenchPos = new Vector3(-6.5f, 0f, 6.8f);
-        private static readonly Vector3 PaintBenchPos = new Vector3(0f, 0f, 6.8f);
-        private static readonly Vector3 WrapBenchPos = new Vector3(6.5f, 0f, 6.8f);
-        private static readonly Vector3 SleighPos = new Vector3(18.5f, 0f, 0f);
+        // ---- posizioni principali (metri) — vedi ShellModels per le misure dell'edificio ----
+        private static readonly Vector3 PlayerStart = new Vector3(0.6f, 0f, -3.2f);
+        private const float PlayerStartYaw = -35f;
+        private static readonly Vector3 ConstructionBenchPos = new Vector3(-4.6f, 0f, ShellModels.MainMaxZ - 0.55f);
+        private static readonly Vector3 PaintBenchPos = new Vector3(1.2f, 0f, ShellModels.MainMaxZ - 0.55f);
+        private static readonly Vector3 WrapBenchPos = new Vector3(ShellModels.MainMaxX - 0.55f, 0f, 1.2f);
+        private static readonly Vector3 FireplacePos = new Vector3(ShellModels.MainMinX + 0.55f, 0f, -4.0f);
+        private static readonly Vector3 SleighPos = new Vector3(ShellModels.DoorCenterX, 0f, -14.3f);
+        private static readonly Vector3 MailboxPos = new Vector3(ShellModels.DoorCenterX - 1.9f, 0f, -9.6f);
 
         private static GameData data;
         private static Material particleMaterial;
@@ -58,9 +67,9 @@ namespace Elfshift.EditorTools
                 Texture2D planks = LoadSourceTexture("Assets/Textures/Source/floor_planks.png");
                 if (planks == null) planks = SaveTexture(ProceduralTextures.WoodPlanks(512), AssetUtil.GeneratedTextures + "/floor_planks.png");
                 Material floorMat = MaterialLibrary.GetTextured("FloorPlanks", planks, Vector2.one, 0.3f);
-                Material dockMat = MaterialLibrary.GetTextured("DockPlanks", planks, Vector2.one, 0.2f);
-                dockMat.SetColor("_BaseColor", new Color(0.8f, 0.84f, 0.95f));
-                dockMat.SetColor("_Color", new Color(0.8f, 0.84f, 0.95f));
+                Material deckMat = MaterialLibrary.GetTextured("DockPlanks", planks, Vector2.one, 0.2f);
+                deckMat.SetColor("_BaseColor", new Color(0.8f, 0.84f, 0.95f));
+                deckMat.SetColor("_Color", new Color(0.8f, 0.84f, 0.95f));
                 Texture2D stripes = LoadSourceTexture("Assets/Textures/Source/wallpaper.png");
                 if (stripes == null) stripes = SaveTexture(ProceduralTextures.WallStripes(512), AssetUtil.GeneratedTextures + "/wallpaper.png");
                 Material wallMat = MaterialLibrary.GetTextured("Wallpaper", stripes, Vector2.one, 0.1f);
@@ -68,50 +77,57 @@ namespace Elfshift.EditorTools
                 particleMaterial = EffectsBuilder.ParticleMaterial(soft);
                 blobMaterial = MaterialLibrary.GetBlobShadow(soft);
 
-                Step("Oggetti di gioco (legno, trenino)...", 0.16f);
-                GameObject woodPrefab = SaveAsPrefab(ItemModels.BuildWood(null), AssetUtil.GeneratedPrefabs + "/Items/Item_Wood.prefab");
-                GameObject trainPrefab = SaveAsPrefab(ItemModels.BuildTrain(null), AssetUtil.GeneratedPrefabs + "/Items/Item_Train.prefab");
-                data = DataBuilder.Build(woodPrefab, trainPrefab);
+                Step("Oggetti di gioco (materiali, giocattoli, pacchi)...", 0.14f);
+                data = DataBuilder.Build(BuildItemPrefabs());
 
-                Step("Sistemi di gioco...", 0.24f);
+                Step("Sistemi di gioco...", 0.22f);
                 GameObject systems = new GameObject("_Game");
                 GameSession session = systems.AddComponent<GameSession>();
                 InputReader input = systems.AddComponent<InputReader>();
                 OrderManager orders = systems.AddComponent<OrderManager>();
                 Wire.Ref(orders, "session", session);
-                Wire.Refs(orders, "pool", new UnityEngine.Object[] { data.TrainOrder });
-                Wire.Int(orders, "maxActive", 1);
+                Wire.Refs(orders, "pool", data.Orders);
+                Wire.Int(orders, "maxActive", 3);
+                Wire.Int(orders, "maxPending", 3);
+                Wire.Float(orders, "firstOrderDelay", 1.5f);
+                Wire.Float(orders, "nextOrderDelay", 24f);
+                DayCycle day = systems.AddComponent<DayCycle>();
+                Wire.Ref(day, "session", session);
+                Wire.Ref(day, "orders", orders);
+                Wire.Float(day, "dayLength", 480f);
                 GameObject iconsObject = new GameObject("ItemIcons");
                 ItemIconService icons = iconsObject.AddComponent<ItemIconService>();
 
-                Step("Pavimento, pareti e soffitto...", 0.32f);
+                Step("Pavimenti, pareti, tetto...", 0.3f);
                 GameObject environment = new GameObject("Environment");
-                ShellModels.Build(environment.transform, floorMat, dockMat, wallMat);
+                ShellModels.Build(environment.transform, floorMat, deckMat, wallMat);
                 BuildBlobMesh();
                 blobGroup = new GameObject("ContactShadows").transform;
                 BuildWindowsAndWallDecor(environment.transform);
 
-                Step("Arredamento e postazioni...", 0.45f);
+                Step("Magazzino e banchi di lavoro...", 0.42f);
                 GameObject furniture = new GameObject("Furniture");
-                BuildShelves(furniture.transform);
-                CraftingStation bench = BuildBenches(furniture.transform);
-                Sleigh sleigh = BuildSleigh(furniture.transform);
-                Transform shelfAnchor = furniture.transform.Find("Shelves/Shelf_Wood");
+                ItemShelf[] shelves = BuildStorage(furniture.transform);
+                CraftingStation[] stations = BuildBenches(furniture.transform);
 
-                Step("Decorazioni e angoli accoglienti...", 0.58f);
+                Step("Angolo del camino e decorazioni...", 0.52f);
+                Fireplace fireplace = BuildLounge(furniture.transform, stations);
                 BuildDecor(furniture.transform);
-                BuildLounge(furniture.transform);
-                BuildOutdoors(furniture.transform);
 
-                Step("Luci ed effetti...", 0.7f);
-                Light sun = BuildLighting(environment.transform);
+                Step("Cortile: slitta, renne, cassetta della posta...", 0.62f);
+                Sleigh sleigh;
+                Mailbox mailbox;
+                BuildYard(furniture.transform, orders, out sleigh, out mailbox);
+
+                Step("Luci ed effetti...", 0.72f);
+                Light moon = BuildLighting(environment.transform);
                 GameObject weather = BuildWeather();
 
                 Step("Elfo e telecamera in prima persona...", 0.8f);
                 GameObject player = BuildPlayer(input, out PlayerInteractor interactor, out Carrier carrier);
-
-                Wire.Ref(sleigh, "orders", orders);
-                if (bench == null || sun == null || weather == null) Debug.LogWarning("[Elfshift] Elementi mancanti nella scena.");
+                Behaviour[] controls = { player.GetComponentInChildren<FirstPersonLook>(), player.GetComponent<PlayerController>(), interactor };
+                Wire.Refs(day, "disableOnEnd", controls);
+                if (moon == null || weather == null) Debug.LogWarning("[Elfshift] Elementi mancanti nella scena.");
 
                 Step("Interfaccia...", 0.9f);
                 HudSources hudSources = new HudSources();
@@ -120,9 +136,12 @@ namespace Elfshift.EditorTools
                 hudSources.Interactor = interactor;
                 hudSources.Carrier = carrier;
                 hudSources.Icons = icons;
-                hudSources.Bench = bench;
-                hudSources.ShelfAnchor = shelfAnchor;
-                hudSources.SleighAnchor = sleigh.transform;
+                hudSources.Stations = stations;
+                hudSources.Shelves = shelves;
+                hudSources.Sleigh = sleigh;
+                hudSources.Mailbox = mailbox;
+                hudSources.Fireplace = fireplace;
+                hudSources.Day = day;
                 hudSources.MarkerObject = PropModels.BuildObjectiveArrow(null).transform;
                 HudBuilder.Build(hudSources);
 
@@ -131,7 +150,6 @@ namespace Elfshift.EditorTools
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
                 AssetDatabase.Refresh();
-                if (player == null) Debug.LogWarning("[Elfshift] Giocatore mancante.");
                 return null;
             }
             catch (Exception e)
@@ -148,7 +166,7 @@ namespace Elfshift.EditorTools
         // ============================================================================ preparazione
         private static void Step(string message, float progress)
         {
-            EditorUtility.DisplayProgressBar("Elfshift - costruzione del laboratorio", message, progress);
+            EditorUtility.DisplayProgressBar("Elfshift - costruzione della bottega", message, progress);
         }
 
         private static void PrepareFolders()
@@ -222,6 +240,13 @@ namespace Elfshift.EditorTools
             t.rotation = Quaternion.Euler(0f, yawDegrees, 0f);
         }
 
+        private static Transform Group(Transform parent, string name)
+        {
+            Transform g = new GameObject(name).transform;
+            g.SetParent(parent, false);
+            return g;
+        }
+
         // ------------------------------------------------------------------ ombre morbide a terra (finto "ambient occlusion")
         private static void BuildBlobMesh()
         {
@@ -233,11 +258,12 @@ namespace Elfshift.EditorTools
         }
 
         /// <summary>Alone scuro e morbido sul pavimento sotto un oggetto: lo "ancora" a terra.</summary>
-        private static void AddBlob(Vector3 center, Vector2 size, float yaw = 0f)
+        private static void AddBlob(Vector3 center, Vector2 size, float yaw = 0f, float floorY = 0f)
         {
             GameObject go = new GameObject("Blob");
             go.transform.SetParent(blobGroup, false);
-            go.transform.position = new Vector3(center.x, 0.045f, center.z);
+            // abbastanza sopra il pavimento (e sopra i tappeti) da non "sfarfallare"
+            go.transform.position = new Vector3(center.x, floorY + 0.06f, center.z);
             go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             go.transform.localScale = new Vector3(size.x, 1f, size.y);
             go.AddComponent<MeshFilter>().sharedMesh = blobMesh;
@@ -247,142 +273,306 @@ namespace Elfshift.EditorTools
             r.receiveShadows = false;
         }
 
-        // ============================================================================ finestre e decorazioni a parete
-        private static void BuildWindowsAndWallDecor(Transform parent)
+        // ============================================================================ oggetti di gioco
+        private static ItemPrefabs BuildItemPrefabs()
         {
-            Transform group = new GameObject("WallDecor").transform;
-            group.SetParent(parent, false);
-            float wallInnerZ = ShellModels.HalfDepth;
-
-            for (int i = 0; i < ShellModels.WindowCenters.Length; i++)
-            {
-                GameObject window = PropModels.BuildWindow(null, ShellModels.WindowWidth, ShellModels.WindowHeight);
-                window.name = "Window_N" + (i + 1);
-                Place(window.transform, group, new Vector3(ShellModels.WindowCenters[i], ShellModels.WindowBottom, wallInnerZ + 0.12f), 180f);
-                GameObject frontWindow = PropModels.BuildWindow(null, ShellModels.WindowWidth, ShellModels.WindowHeight);
-                frontWindow.name = "Window_S" + (i + 1);
-                Place(frontWindow.transform, group, new Vector3(ShellModels.WindowCenters[i], ShellModels.WindowBottom, -wallInnerZ - 0.12f), 0f);
-            }
-
-            // bacheca degli ordini, corona e orologio sulla parete nord (tra le finestre)
-            GameObject board = PropModels.BuildCorkBoard(null);
-            board.name = "OrderBoard";
-            Place(board.transform, group, new Vector3(-7.75f, 2.8f, wallInnerZ - 0.08f), 180f);
-            GameObject wreath = PropModels.BuildWreath(null);
-            Place(wreath.transform, group, new Vector3(3.35f, 2.9f, wallInnerZ - 0.1f), 180f);
-            GameObject clock = DecorModels.BuildWallClock(null);
-            Place(clock.transform, group, new Vector3(-2.25f, 3.3f, wallInnerZ - 0.1f), 180f);
-            // sulla parete sud: una seconda corona e una bacheca decorativa
-            GameObject wreathS = PropModels.BuildWreath(null);
-            Place(wreathS.transform, group, new Vector3(-2.25f, 2.9f, -wallInnerZ + 0.1f), 0f);
-            GameObject boardS = PropModels.BuildCorkBoard(null);
-            boardS.name = "Board_S";
-            Place(boardS.transform, group, new Vector3(3.35f, 2.8f, -wallInnerZ + 0.08f), 0f);
-
-            // Luci di Natale appese lungo le pareti
-            Transform lights = new GameObject("LightStrings").transform;
-            lights.SetParent(group, false);
-            float y = 4.35f;
-            for (int i = 0; i < 7; i++)
-            {
-                float x0 = -14f + i * 4f;
-                PropModels.BuildLightString(lights, "North_" + i, new Vector3(x0 + 0.1f, y, wallInnerZ - 0.12f), new Vector3(x0 + 3.9f, y, wallInnerZ - 0.12f), 0.45f, 10, BulbRenderers, BulbColors);
-                PropModels.BuildLightString(lights, "South_" + i, new Vector3(x0 + 0.1f, y, -wallInnerZ + 0.12f), new Vector3(x0 + 3.9f, y, -wallInnerZ + 0.12f), 0.45f, 10, BulbRenderers, BulbColors);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                float z0 = -10f + i * 4f;
-                PropModels.BuildLightString(lights, "West_" + i, new Vector3(-ShellModels.HalfWidth + 0.12f, y, z0 + 0.1f), new Vector3(-ShellModels.HalfWidth + 0.12f, y, z0 + 3.9f), 0.45f, 10, BulbRenderers, BulbColors);
-            }
-
-            // festoni di bandierine che attraversano il salone
-            DecorModels.BuildBunting(group, "Bunting_A", new Vector3(-13.5f, 4.45f, -5f), new Vector3(13.5f, 4.45f, -5f), 0.7f, 34);
-            DecorModels.BuildBunting(group, "Bunting_B", new Vector3(-13.5f, 4.45f, 0.2f), new Vector3(13.5f, 4.45f, 0.2f), 0.7f, 34);
+            string folder = AssetUtil.GeneratedPrefabs + "/Items/";
+            ItemPrefabs p = new ItemPrefabs();
+            p.Wood = SaveAsPrefab(ItemModels.BuildWood(null), folder + "Item_Wood.prefab");
+            p.Cloth = SaveAsPrefab(ItemModels.BuildCloth(null), folder + "Item_Cloth.prefab");
+            p.Metal = SaveAsPrefab(ItemModels.BuildMetal(null), folder + "Item_Metal.prefab");
+            p.TrainRaw = Toy(ItemModels.ToyKind.Train, ItemModels.ToyStage.Raw, folder);
+            p.TrainPainted = Toy(ItemModels.ToyKind.Train, ItemModels.ToyStage.Painted, folder);
+            p.TrainGift = SaveAsPrefab(ItemModels.BuildGift(null, ItemModels.ToyKind.Train), folder + "Item_TrainGift.prefab");
+            p.TeddyRaw = Toy(ItemModels.ToyKind.Teddy, ItemModels.ToyStage.Raw, folder);
+            p.TeddyPainted = Toy(ItemModels.ToyKind.Teddy, ItemModels.ToyStage.Painted, folder);
+            p.TeddyGift = SaveAsPrefab(ItemModels.BuildGift(null, ItemModels.ToyKind.Teddy), folder + "Item_TeddyGift.prefab");
+            p.RobotRaw = Toy(ItemModels.ToyKind.Robot, ItemModels.ToyStage.Raw, folder);
+            p.RobotPainted = Toy(ItemModels.ToyKind.Robot, ItemModels.ToyStage.Painted, folder);
+            p.RobotGift = SaveAsPrefab(ItemModels.BuildGift(null, ItemModels.ToyKind.Robot), folder + "Item_RobotGift.prefab");
+            return p;
         }
 
-        // ============================================================================ scaffali
-        private static void BuildShelves(Transform parent)
+        private static GameObject Toy(ItemModels.ToyKind kind, ItemModels.ToyStage stage, string folder)
         {
-            Transform group = new GameObject("Shelves").transform;
-            group.SetParent(parent, false);
-            float westX = -ShellModels.HalfWidth + FurnitureModels.ShelfDepth / 2f + 0.06f;
-            float eastX = ShellModels.HalfWidth - FurnitureModels.ShelfDepth / 2f - 0.06f;
+            GameObject go = ItemModels.BuildToy(null, kind, stage);
+            return SaveAsPrefab(go, folder + go.name + ".prefab");
+        }
 
-            // Scaffale del legno: l'unico attivo nella Fase 1
-            GameObject wood = FurnitureModels.BuildShelf(null, "Wood");
-            ItemShelf shelf = wood.AddComponent<ItemShelf>();
-            Wire.Ref(shelf, "item", data.Wood);
-            Wire.Ref(shelf, "spawnOrigin", wood.transform.Find("SpawnOrigin"));
-            Wire.Ref(shelf, "bounceTarget", wood.transform.Find("Goods"));
-            Wire.Ref(shelf, "interactionPoint", wood.transform.Find("InteractionPoint"));
-            Wire.Float(shelf, "radius", 2.4f);
-            Wire.Str(shelf, "displayName", "Scaffale del legno");
-            SaveAsConnectedPrefab(wood, AssetUtil.GeneratedPrefabs + "/Stations/Shelf_Wood.prefab");
-            Place(wood.transform, group, new Vector3(westX, 0f, 6.0f), 90f);
-            AddBlob(new Vector3(westX + 0.2f, 0f, 6.0f), new Vector2(1.9f, 3.4f));
+        // ============================================================================ finestre, porte e decorazioni a parete
+        private static void BuildWindowsAndWallDecor(Transform parent)
+        {
+            Transform group = Group(parent, "WallDecor");
+            List<ShellModels.WallSpec> walls = ShellModels.Walls();
+            int n = 0;
+            for (int w = 0; w < walls.Count; w++)
+            {
+                ShellModels.WallSpec wall = walls[w];
+                for (int i = 0; i < wall.Openings.Count; i++)
+                {
+                    ShellModels.Opening o = wall.Openings[i];
+                    // le aperture stanno a metà dello spessore del muro
+                    Vector3 mid = wall.PointAt(o.Center) - wall.Inward * (ShellModels.WallThickness / 2f);
+                    if (o.IsWindow)
+                    {
+                        GameObject window = PropModels.BuildWindow(null, o.Width, o.Top - o.Bottom);
+                        window.name = "Window_" + wall.Name + "_" + (++n);
+                        Place(window.transform, group, mid + Vector3.up * o.Bottom, wall.FacingYaw);
+                    }
+                    else
+                    {
+                        GameObject frame = YardModels.BuildDoorFrame(null, o.Width, o.Top, ShellModels.WallThickness);
+                        frame.name = "Frame_" + wall.Name;
+                        Place(frame.transform, group, mid, wall.FacingYaw);
+                    }
+                }
+            }
 
-            // Scaffali di stoffa e metallo: per ora solo scenografia (si attiveranno nella Fase 2)
-            GameObject cloth = FurnitureModels.BuildShelf(null, "Cloth");
-            Place(cloth.transform, group, new Vector3(westX, 0f, 2.5f), 90f);
-            AddBlob(new Vector3(westX + 0.2f, 0f, 2.5f), new Vector2(1.9f, 3.4f));
-            GameObject metal = FurnitureModels.BuildShelf(null, "Metal");
-            Place(metal.transform, group, new Vector3(westX, 0f, -1.0f), 90f);
-            AddBlob(new Vector3(westX + 0.2f, 0f, -1.0f), new Vector2(1.9f, 3.4f));
+            float nZ = ShellModels.MainMaxZ, sZ = ShellModels.MainMinZ, eX = ShellModels.MainMaxX;
+            // bacheca delle letterine sopra la vetrina dei giocattoli, corone sopra i banchi, orologio sopra il banco dei pacchi
+            GameObject board = PropModels.BuildCorkBoard(null);
+            board.name = "OrderBoard";
+            Place(board.transform, group, new Vector3(-0.1f, 2.95f, sZ + 0.08f), 0f);
+            GameObject wreathA = PropModels.BuildWreath(null);
+            Place(wreathA.transform, group, new Vector3(ConstructionBenchPos.x, 3.15f, nZ - 0.1f), 180f);
+            GameObject wreathB = PropModels.BuildWreath(null);
+            Place(wreathB.transform, group, new Vector3(PaintBenchPos.x, 3.15f, nZ - 0.1f), 180f);
+            GameObject wreathC = PropModels.BuildWreath(null);
+            Place(wreathC.transform, group, new Vector3(ShellModels.DoorCenterX, ShellModels.DoorHeight + 0.75f, sZ + 0.1f), 0f);
+            GameObject clock = DecorModels.BuildWallClock(null);
+            Place(clock.transform, group, new Vector3(eX - 0.1f, 3.1f, WrapBenchPos.z), -90f);
 
-            // Vetrine dei giocattoli finiti (scenografia)
-            GameObject toysW = FurnitureModels.BuildShelf(null, "Toys");
-            Place(toysW.transform, group, new Vector3(westX, 0f, -4.6f), 90f);
-            AddBlob(new Vector3(westX + 0.2f, 0f, -4.6f), new Vector2(1.9f, 3.4f));
-            GameObject toysE1 = FurnitureModels.BuildShelf(null, "Toys");
-            Place(toysE1.transform, group, new Vector3(eastX, 0f, 6.4f), -90f);
-            AddBlob(new Vector3(eastX - 0.2f, 0f, 6.4f), new Vector2(1.9f, 3.4f));
-            GameObject toysE2 = FurnitureModels.BuildShelf(null, "Toys");
-            Place(toysE2.transform, group, new Vector3(eastX, 0f, -6.4f), -90f);
-            AddBlob(new Vector3(eastX - 0.2f, 0f, -6.4f), new Vector2(1.9f, 3.4f));
+            // lucine lungo le pareti, sotto il soffitto
+            Transform lights = Group(group, "LightStrings");
+            float y = ShellModels.WallHeight - 0.45f;
+            for (int i = 0; i < 4; i++)
+            {
+                float x0 = ShellModels.MainMinX + i * 4f;
+                PropModels.BuildLightString(lights, "North_" + i, new Vector3(x0 + 0.2f, y, nZ - 0.14f), new Vector3(x0 + 3.8f, y, nZ - 0.14f), 0.35f, 9, BulbRenderers, BulbColors);
+                PropModels.BuildLightString(lights, "South_" + i, new Vector3(x0 + 0.2f, y, sZ + 0.14f), new Vector3(x0 + 3.8f, y, sZ + 0.14f), 0.35f, 9, BulbRenderers, BulbColors);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                float z0 = sZ + i * 4f;
+                PropModels.BuildLightString(lights, "East_" + i, new Vector3(eX - 0.14f, y, z0 + 0.2f), new Vector3(eX - 0.14f, y, z0 + 3.8f), 0.35f, 9, BulbRenderers, BulbColors);
+            }
+            // lucine sulla grondaia esterna, sopra la porta (si vedono dal cortile)
+            PropModels.BuildLightString(lights, "Porch", new Vector3(ShellModels.DoorCenterX - 3.2f, ShellModels.WallHeight - 0.2f, sZ - 0.5f),
+                new Vector3(ShellModels.DoorCenterX + 3.2f, ShellModels.WallHeight - 0.2f, sZ - 0.5f), 0.45f, 12, BulbRenderers, BulbColors);
+
+            // festoni di bandierine che attraversano il laboratorio
+            DecorModels.BuildBunting(group, "Bunting_A", new Vector3(ShellModels.MainMinX + 0.4f, 3.75f, -1.6f), new Vector3(ShellModels.MainMaxX - 0.4f, 3.75f, -1.6f), 0.55f, 22);
+            DecorModels.BuildBunting(group, "Bunting_B", new Vector3(ShellModels.MainMinX + 0.4f, 3.75f, 1.6f), new Vector3(ShellModels.MainMaxX - 0.4f, 3.75f, 1.6f), 0.55f, 22);
+        }
+
+        // ============================================================================ magazzino
+        /// <summary>Il magazzino a ovest: tre scaffali (legno, stoffa, metallo) e casse ovunque.</summary>
+        private static ItemShelf[] BuildStorage(Transform parent)
+        {
+            Transform group = Group(parent, "Storage");
+            float ax0 = ShellModels.AnnexMinX, ax1 = ShellModels.AnnexMaxX, az0 = ShellModels.AnnexMinZ, az1 = ShellModels.AnnexMaxZ;
+            float inset = FurnitureModels.ShelfDepth / 2f + 0.08f;
+            float cx = (ax0 + ax1) / 2f;
+
+            ItemShelf wood = Shelf(group, "Wood", data.Wood, "Scaffale del legno", new Vector3(cx, 0f, az1 - inset), 180f);
+            ItemShelf cloth = Shelf(group, "Cloth", data.Cloth, "Scaffale della stoffa", new Vector3(ax0 + inset, 0f, (az0 + az1) / 2f), 90f);
+            ItemShelf metal = Shelf(group, "Metal", data.Metal, "Scaffale del metallo", new Vector3(cx, 0f, az0 + inset), 0f);
+
+            // casse e barili negli angoli
+            GameObject crate1 = PropModels.BuildCrate(null, new Vector3(0.9f, 0.7f, 0.9f), false);
+            Place(crate1.transform, group, new Vector3(ax1 - 0.75f, 0f, az1 - 0.75f), 10f);
+            GameObject crate2 = PropModels.BuildCrate(null, new Vector3(0.75f, 0.6f, 0.75f), false);
+            Place(crate2.transform, group, new Vector3(ax1 - 0.7f, 0.7f, az1 - 0.75f), -12f);
+            GameObject crate3 = PropModels.BuildCrate(null, new Vector3(0.85f, 0.65f, 0.85f), false);
+            Place(crate3.transform, group, new Vector3(ax0 + 0.75f, 0f, az0 + 0.75f), 4f);
+            GameObject barrel1 = PropModels.BuildBarrel(null, false);
+            Place(barrel1.transform, group, new Vector3(ax0 + 0.65f, 0f, az1 - 0.65f), 0f);
+            GameObject barrel2 = PropModels.BuildBarrel(null, true);
+            Place(barrel2.transform, group, new Vector3(ax1 - 0.7f, 0f, az0 + 0.7f), 40f);
+            AddBlob(new Vector3(ax1 - 0.75f, 0f, az1 - 0.75f), new Vector2(1.5f, 1.5f));
+            AddBlob(new Vector3(ax0 + 0.75f, 0f, az0 + 0.75f), new Vector2(1.4f, 1.4f));
+
+            // lampada appesa del magazzino
+            GameObject lamp = PropModels.BuildHangingLamp(null, 0.9f);
+            Place(lamp.transform, group, new Vector3(cx, ShellModels.AnnexHeight, (az0 + az1) / 2f), 0f);
+            AddPointLight(lamp.transform, "LampLight", new Vector3(0f, -0.9f - 0.28f, 0f), new Color(1f, 0.8f, 0.52f), 2.4f, 8f, false);
+            return new[] { wood, cloth, metal };
+        }
+
+        private static ItemShelf Shelf(Transform group, string kind, ItemDefinition item, string label, Vector3 pos, float yaw)
+        {
+            GameObject go = FurnitureModels.BuildShelf(null, kind);
+            ItemShelf shelf = go.AddComponent<ItemShelf>();
+            Wire.Ref(shelf, "item", item);
+            Wire.Ref(shelf, "spawnOrigin", go.transform.Find("SpawnOrigin"));
+            Wire.Ref(shelf, "bounceTarget", go.transform.Find("Goods"));
+            Wire.Ref(shelf, "interactionPoint", go.transform.Find("InteractionPoint"));
+            Wire.Float(shelf, "radius", 2.3f);
+            Wire.Str(shelf, "displayName", label);
+            SaveAsConnectedPrefab(go, AssetUtil.GeneratedPrefabs + "/Stations/Shelf_" + kind + ".prefab");
+            Place(go.transform, group, pos, yaw);
+            Vector3 back = Quaternion.Euler(0f, yaw, 0f) * new Vector3(0f, 0f, -0.1f);
+            AddBlob(pos + back, new Vector2(3.0f, 1.6f), yaw);
+            return shelf;
         }
 
         // ============================================================================ banchi
-        private static CraftingStation BuildBenches(Transform parent)
+        private static CraftingStation[] BuildBenches(Transform parent)
         {
-            Transform group = new GameObject("Workbenches").transform;
-            group.SetParent(parent, false);
+            Transform group = Group(parent, "Workbenches");
+            CraftingStation construction = Bench(group, "Construction", StationType.Construction, "Banco di costruzione", ConstructionBenchPos, 180f);
+            CraftingStation paint = Bench(group, "Paint", StationType.Paint, "Banco dei colori", PaintBenchPos, 180f);
+            CraftingStation wrap = Bench(group, "Wrap", StationType.Wrap, "Banco dei pacchi", WrapBenchPos, -90f);
 
-            // Banco di costruzione (attivo)
-            GameObject construction = FurnitureModels.BuildWorkbench(null, "Construction", true);
-            CraftingStation station = construction.AddComponent<CraftingStation>();
-            Wire.Enum(station, "stationType", (int)StationType.Construction);
-            Wire.Refs(station, "recipes", new UnityEngine.Object[] { data.TrainRecipe });
-            Wire.Refs(station, "inputSlots", new UnityEngine.Object[] { construction.transform.Find("Input1"), construction.transform.Find("Input2") });
-            Wire.Ref(station, "outputSlot", construction.transform.Find("Output"));
-            Wire.Ref(station, "interactionPoint", construction.transform.Find("InteractionPoint"));
-            Wire.Float(station, "radius", 2.4f);
-            Wire.Str(station, "displayName", "Banco di costruzione");
-            ParticleSystem dust = EffectsBuilder.CreateWorkDust(construction.transform.Find("WorkFx"), "WorkDust", Vector3.zero, particleMaterial);
-            ParticleSystem sparkle = EffectsBuilder.CreateSparkle(construction.transform.Find("CompleteFx"), "CompleteSparkle", Vector3.zero, particleMaterial);
+            // lampade appese sopra i banchi (ognuna con la sua luce calda)
+            Vector3[] lamps = { ConstructionBenchPos, PaintBenchPos, WrapBenchPos };
+            for (int i = 0; i < lamps.Length; i++)
+            {
+                GameObject lamp = PropModels.BuildHangingLamp(null, 1.25f);
+                Vector3 toRoom = i < 2 ? new Vector3(0f, 0f, -0.35f) : new Vector3(-0.35f, 0f, 0f);
+                Place(lamp.transform, group, new Vector3(lamps[i].x, ShellModels.WallHeight, lamps[i].z) + toRoom, 0f);
+                AddPointLight(lamp.transform, "LampLight", new Vector3(0f, -1.25f - 0.28f, 0f), new Color(1f, 0.78f, 0.5f), 2.4f, 7.5f, false);
+            }
+            return new[] { construction, paint, wrap };
+        }
+
+        private static CraftingStation Bench(Transform group, string kind, StationType type, string label, Vector3 pos, float yaw)
+        {
+            GameObject go = FurnitureModels.BuildWorkbench(null, kind, true);
+            CraftingStation station = go.AddComponent<CraftingStation>();
+            Wire.Enum(station, "stationType", (int)type);
+            Wire.Refs(station, "recipes", data.RecipesFor(type));
+            // costruzione: 2 ingredienti; colori e pacchi: 1
+            if (type == StationType.Construction)
+                Wire.Refs(station, "inputSlots", new UnityEngine.Object[] { go.transform.Find("Input1"), go.transform.Find("Input2") });
+            else
+                Wire.Refs(station, "inputSlots", new UnityEngine.Object[] { go.transform.Find("Input1") });
+            Wire.Ref(station, "outputSlot", go.transform.Find("Output"));
+            Wire.Ref(station, "interactionPoint", go.transform.Find("InteractionPoint"));
+            Wire.Float(station, "radius", 2.3f);
+            Wire.Str(station, "displayName", label);
+            ParticleSystem dust = EffectsBuilder.CreateWorkDust(go.transform.Find("WorkFx"), "WorkDust", Vector3.zero, particleMaterial);
+            ParticleSystem sparkle = EffectsBuilder.CreateSparkle(go.transform.Find("CompleteFx"), "CompleteSparkle", Vector3.zero, particleMaterial);
             Wire.Ref(station, "workEffect", dust);
             Wire.Ref(station, "completeEffect", sparkle);
-            SaveAsConnectedPrefab(construction, AssetUtil.GeneratedPrefabs + "/Stations/Bench_Construction.prefab");
-            Place(construction.transform, group, ConstructionBenchPos, 180f);
-            AddBlob(ConstructionBenchPos + new Vector3(0f, 0f, 0.2f), new Vector2(3.0f, 1.9f));
-
-            // Banco di verniciatura e banco dei pacchi: scenografia (si attiveranno nella Fase 2)
-            GameObject paint = FurnitureModels.BuildWorkbench(null, "Paint", false);
-            Place(paint.transform, group, PaintBenchPos, 180f);
-            AddBlob(PaintBenchPos + new Vector3(0f, 0f, 0.2f), new Vector2(3.0f, 1.9f));
-            GameObject wrap = FurnitureModels.BuildWorkbench(null, "Wrap", false);
-            Place(wrap.transform, group, WrapBenchPos, 180f);
-            AddBlob(WrapBenchPos + new Vector3(0f, 0f, 0.2f), new Vector2(3.0f, 1.9f));
+            SaveAsConnectedPrefab(go, AssetUtil.GeneratedPrefabs + "/Stations/Bench_" + kind + ".prefab");
+            Place(go.transform, group, pos, yaw);
+            AddBlob(pos, new Vector2(2.9f, 1.7f), yaw);
             return station;
         }
 
-        // ============================================================================ slitta
-        private static Sleigh BuildSleigh(Transform parent)
+        // ============================================================================ angolo del camino
+        private static Fireplace BuildLounge(Transform parent, CraftingStation[] stations)
         {
-            Transform group = new GameObject("DeliveryZone").transform;
-            group.SetParent(parent, false);
+            Transform group = Group(parent, "Lounge");
 
+            Light fireLight;
+            GameObject fireplaceObject = DecorModels.BuildFireplace(null, ShellModels.WallHeight, out fireLight);
+            // Le fiamme tremolano da sole (FlameFlicker): per farle crescere col calore le metto sotto un genitore comune.
+            Transform fireScale = new GameObject("FireScale").transform;
+            fireScale.SetParent(fireplaceObject.transform, false);
+            Transform flames = fireplaceObject.transform.Find("Flames");
+            Transform inner = fireplaceObject.transform.Find("FlamesInner");
+            if (flames != null) fireScale.localPosition = new Vector3(flames.localPosition.x, flames.localPosition.y, flames.localPosition.z);
+            if (flames != null) flames.SetParent(fireScale, true);
+            if (inner != null) inner.SetParent(fireScale, true);
+            ModelKit.Empty(fireplaceObject.transform, "BurnPoint", new Vector3(0f, 0.45f, 0.25f));
+            ModelKit.Empty(fireplaceObject.transform, "InteractionPoint", new Vector3(0f, 0f, 1.35f));
+            Transform burstFx = ModelKit.Empty(fireplaceObject.transform, "BurstFx", new Vector3(0f, 0.8f, 0.3f));
+
+            Fireplace fireplace = fireplaceObject.AddComponent<Fireplace>();
+            Wire.Ref(fireplace, "fuel", data.Wood);
+            Wire.Ref(fireplace, "burnPoint", fireplaceObject.transform.Find("BurnPoint"));
+            Wire.Refs(fireplace, "stations", stations);
+            Wire.Ref(fireplace, "flames", fireScale);
+            Wire.Ref(fireplace, "fireLight", fireLight);
+            Wire.Ref(fireplace, "interactionPoint", fireplaceObject.transform.Find("InteractionPoint"));
+            Wire.Float(fireplace, "radius", 2.4f);
+            Wire.Str(fireplace, "displayName", "Camino");
+            Wire.Ref(fireplace, "burstEffect", EffectsBuilder.CreateSparkle(burstFx, "Burst", Vector3.zero, particleMaterial));
+            Place(fireplaceObject.transform, group, FireplacePos, 90f);
+            AddBlob(FireplacePos + new Vector3(0.6f, 0f, 0f), new Vector2(4.2f, 2.6f), 90f);
+
+            // poltrone rivolte verso il fuoco, tavolino e tappeto
+            GameObject rug = PropModels.BuildRug(null, 3.4f, 3.0f);
+            Place(rug.transform, group, new Vector3(-5.6f, 0.012f, -4.0f), 90f);
+            GameObject chairA = DecorModels.BuildArmchair(null, "RedSanta");
+            Place(chairA.transform, group, new Vector3(-4.7f, 0f, -2.85f), 245f);
+            GameObject chairB = DecorModels.BuildArmchair(null, "GreenElf");
+            Place(chairB.transform, group, new Vector3(-4.7f, 0f, -5.05f), 295f);
+            GameObject table = DecorModels.BuildSideTable(null);
+            Place(table.transform, group, new Vector3(-4.3f, 0f, -3.95f), 0f);
+            AddBlob(new Vector3(-4.7f, 0f, -2.85f), new Vector2(1.6f, 1.6f));
+            AddBlob(new Vector3(-4.7f, 0f, -5.05f), new Vector2(1.6f, 1.6f));
+            return fireplace;
+        }
+
+        // ============================================================================ decorazioni del laboratorio
+        private static void BuildDecor(Transform parent)
+        {
+            Transform group = Group(parent, "Decor");
+
+            // tappeto e tavolo espositore al centro, con il lampadario sopra
+            GameObject rug = PropModels.BuildRug(null, 5.2f, 3.6f);
+            Place(rug.transform, group, new Vector3(0.4f, 0.012f, -0.6f), 0f);
+            GameObject display = DecorModels.BuildDisplayTable(null);
+            Place(display.transform, group, new Vector3(0.4f, 0f, -0.6f), 0f);
+            AddBlob(new Vector3(0.4f, 0f, -0.6f), new Vector2(2.6f, 2.6f));
+            Vector3 chandelierLight;
+            GameObject chandelier = DecorModels.BuildChandelier(null, 1.0f, out chandelierLight);
+            Place(chandelier.transform, group, new Vector3(0.4f, ShellModels.WallHeight, -0.6f), 0f);
+            AddPointLight(chandelier.transform, "ChandelierLight", chandelierLight, new Color(1f, 0.82f, 0.55f), 2.8f, 11f, false);
+
+            // albero di Natale nell'angolo nord-est
+            List<Renderer> treeBulbs;
+            List<Color> treeColors;
+            GameObject tree = PropModels.BuildChristmasTree(null, out treeBulbs, out treeColors);
+            Vector3 treePos = new Vector3(ShellModels.MainMaxX - 1.6f, 0f, ShellModels.MainMaxZ - 1.5f);
+            tree.transform.localScale = Vector3.one * 0.85f;
+            Place(tree.transform, group, treePos, 200f);
+            BulbRenderers.AddRange(treeBulbs);
+            BulbColors.AddRange(treeColors);
+            AddPointLight(tree.transform, "TreeGlow", new Vector3(0f, 2.0f, 1.6f), new Color(1f, 0.85f, 0.55f), 1.6f, 6f, false);
+            AddBlob(treePos, new Vector2(3.6f, 3.6f));
+
+            // vetrina dei giocattoli finiti sulla parete sud, sotto la bacheca delle letterine
+            GameObject toys = FurnitureModels.BuildShelf(null, "Toys");
+            Vector3 toysPos = new Vector3(-0.1f, 0f, ShellModels.MainMinZ + FurnitureModels.ShelfDepth / 2f + 0.08f);
+            Place(toys.transform, group, toysPos, 0f);
+            AddBlob(toysPos, new Vector2(3.0f, 1.5f));
+
+            // casse vicino alla porta (carta da regalo e nastri in attesa) e pila di regali pronti
+            GameObject crate = PropModels.BuildCrate(null, new Vector3(0.8f, 0.6f, 0.8f), false);
+            Place(crate.transform, group, new Vector3(ShellModels.MainMaxX - 0.7f, 0f, ShellModels.MainMinZ + 0.7f), 15f);
+            GameObject barrel = PropModels.BuildBarrel(null, true);
+            Place(barrel.transform, group, new Vector3(ShellModels.MainMaxX - 0.65f, 0f, ShellModels.MainMinZ + 1.75f), 0f);
+            AddBlob(new Vector3(ShellModels.MainMaxX - 0.7f, 0f, ShellModels.MainMinZ + 1.2f), new Vector2(1.4f, 2.4f));
+            MeshBuilder gifts = new MeshBuilder();
+            ModelKit.Begin("GiftPile");
+            FurnitureModels.AddGift(gifts, new Vector3(0f, 0f, 0f), new Vector3(0.55f, 0.45f, 0.5f), "RedSanta", "Gold", 12f);
+            FurnitureModels.AddGift(gifts, new Vector3(0.62f, 0f, 0.1f), new Vector3(0.42f, 0.34f, 0.42f), "ClothBlue", "Cream", -18f);
+            FurnitureModels.AddGift(gifts, new Vector3(0.1f, 0.45f, 0f), new Vector3(0.36f, 0.3f, 0.36f), "GreenElf", "Gold", 35f);
+            GameObject giftPile = new GameObject("GiftPile");
+            ModelKit.Part(giftPile.transform, "Mesh", gifts);
+            Place(giftPile.transform, group, new Vector3(ShellModels.MainMaxX - 1.2f, 0f, 3.3f), -30f);
+
+            // lampeggio delle lucine (pareti, albero, veranda)
+            GameObject twinkleObject = new GameObject("TwinkleLights");
+            twinkleObject.transform.SetParent(group, false);
+            TwinkleLights twinkle = twinkleObject.AddComponent<TwinkleLights>();
+            twinkle.EditorSetup(BulbRenderers.ToArray(), BulbColors.ToArray());
+            EditorUtility.SetDirty(twinkle);
+        }
+
+        // ============================================================================ cortile
+        private static void BuildYard(Transform parent, OrderManager orders, out Sleigh sleigh, out Mailbox mailbox)
+        {
+            Transform group = Group(parent, "Yard");
+
+            // ---- slitta (consegne) -----------------------------------------------------------
             GameObject sleighObject = FurnitureModels.BuildSleigh(null);
-            Sleigh sleigh = sleighObject.AddComponent<Sleigh>();
+            sleigh = sleighObject.AddComponent<Sleigh>();
+            Wire.Ref(sleigh, "orders", orders);
             Wire.Ref(sleigh, "dropPoint", sleighObject.transform.Find("DropPoint"));
             Wire.Ref(sleigh, "bounceTarget", sleighObject.transform.Find("Body"));
             Wire.Ref(sleigh, "interactionPoint", sleighObject.transform.Find("InteractionPoint"));
@@ -391,179 +581,102 @@ namespace Elfshift.EditorTools
             ParticleSystem confetti = EffectsBuilder.CreateConfetti(sleighObject.transform.Find("DeliveryFx"), "Confetti", Vector3.zero, particleMaterial);
             Wire.Ref(sleigh, "deliveryEffect", confetti);
             SaveAsConnectedPrefab(sleighObject, AssetUtil.GeneratedPrefabs + "/Stations/Sleigh.prefab");
-            Place(sleighObject.transform, group, SleighPos, 0f);
-            AddBlob(SleighPos + new Vector3(0.2f, 0f, 0.2f), new Vector2(2.6f, 4.8f));
+            // di fianco al sentiero: il lato di carico (sinistro della slitta) guarda la porta
+            Place(sleighObject.transform, group, SleighPos, 90f);
+            AddBlob(SleighPos, new Vector2(4.6f, 2.4f));
 
-            // Lanterne e staccionata della banchina
-            float dockX = ShellModels.HalfWidth + ShellModels.DockLength / 2f + 0.2f;
-            for (int sx = 0; sx < 2; sx++)
+            // ---- renne davanti alla slitta ------------------------------------------------------
+            for (int i = 0; i < 2; i++)
             {
-                for (int sz = -1; sz <= 1; sz += 2)
-                {
-                    GameObject post = PropModels.BuildLanternPost(null);
-                    float px = sx == 0 ? ShellModels.HalfWidth + 0.8f : ShellModels.HalfWidth + ShellModels.DockLength - 0.1f;
-                    Place(post.transform, group, new Vector3(px, 0f, sz * (ShellModels.DockHalfDepth - 0.5f)), 0f);
-                    AddPointLight(post.transform, "Light", new Vector3(0f, 2.02f, 0f), new Color(1f, 0.8f, 0.5f), 1.8f, 7f, true);
-                }
+                GameObject deer = YardModels.BuildReindeer(null, i);
+                Vector3 p = SleighPos + new Vector3(3.4f, 0f, i == 0 ? 0.75f : -0.75f);
+                Place(deer.transform, group, p, 90f + (i == 0 ? -6f : 8f));
+                Transform head = deer.transform.Find("Head");
+                if (head != null) head.gameObject.AddComponent<IdleNod>();
+                AddBlob(p, new Vector2(1.8f, 1.2f), 90f);
             }
-            for (int sz = -1; sz <= 1; sz += 2)
-            {
-                GameObject fence = PropModels.BuildFence(null, ShellModels.DockLength);
-                Place(fence.transform, group, new Vector3(dockX, 0f, sz * (ShellModels.DockHalfDepth - 0.1f)), 0f);
-            }
-            GameObject endFence = PropModels.BuildFence(null, ShellModels.DockHalfDepth * 2f);
-            Place(endFence.transform, group, new Vector3(ShellModels.HalfWidth + ShellModels.DockLength + 0.3f, 0f, 0f), 90f);
+            GameObject hay = YardModels.BuildHayBale(null);
+            Place(hay.transform, group, SleighPos + new Vector3(6.2f, 0f, 1.6f), 20f);
+            GameObject carrots = YardModels.BuildCarrotCrate(null);
+            Place(carrots.transform, group, SleighPos + new Vector3(5.6f, 0f, -1.9f), -15f);
 
-            // pila di regali pronti accanto alla slitta
+            // ---- cassetta delle letterine accanto al sentiero ----------------------------------------
+            GameObject box = YardModels.BuildMailbox(null);
+            mailbox = box.AddComponent<Mailbox>();
+            Wire.Ref(mailbox, "orders", orders);
+            Wire.Ref(mailbox, "flag", box.transform.Find("Flag"));
+            Transform letters = box.transform.Find("Letters");
+            Wire.Ref(mailbox, "lettersVisual", letters != null ? letters.gameObject : null);
+            Wire.Ref(mailbox, "interactionPoint", box.transform.Find("InteractionPoint"));
+            Wire.Float(mailbox, "radius", 2.2f);
+            Wire.Str(mailbox, "displayName", "Cassetta delle letterine");
+            Transform fx = ModelKit.Empty(box.transform, "CollectFx", new Vector3(0f, 1.3f, 0.2f));
+            Wire.Ref(mailbox, "collectEffect", EffectsBuilder.CreateSparkle(fx, "Sparkle", Vector3.zero, particleMaterial));
+            Place(box.transform, group, MailboxPos, 90f);
+            AddBlob(MailboxPos, new Vector2(0.9f, 0.9f));
+
+            // ---- lanterne lungo il sentiero e staccionata del cortile ----------------------------------
+            Vector3[] posts =
+            {
+                new Vector3(ShellModels.DoorCenterX - 2.3f, 0f, -8.9f), new Vector3(ShellModels.DoorCenterX + 2.3f, 0f, -8.9f),
+                new Vector3(ShellModels.DoorCenterX - 1.4f, 0f, -12.4f), new Vector3(ShellModels.DoorCenterX + 1.4f, 0f, -12.4f),
+            };
+            for (int i = 0; i < posts.Length; i++)
+            {
+                GameObject post = PropModels.BuildLanternPost(null);
+                Place(post.transform, group, posts[i], 0f);
+                AddPointLight(post.transform, "Light", new Vector3(0f, 2.02f, 0f), new Color(1f, 0.8f, 0.5f), 1.7f, 6.5f, true);
+            }
+            float fx0 = -12f, fx1 = 13f, fz0 = -7f, fz1 = -19.5f;
+            GameObject front = PropModels.BuildFence(null, fx1 - fx0);
+            Place(front.transform, group, new Vector3((fx0 + fx1) / 2f, 0f, fz1), 0f);
+            GameObject westFence = PropModels.BuildFence(null, fz0 - fz1);
+            Place(westFence.transform, group, new Vector3(fx0, 0f, (fz0 + fz1) / 2f), 90f);
+            GameObject eastFence = PropModels.BuildFence(null, fz0 - fz1);
+            Place(eastFence.transform, group, new Vector3(fx1, 0f, (fz0 + fz1) / 2f), 90f);
+            AddFenceCollider(group, new Vector3((fx0 + fx1) / 2f, 0.6f, fz1), new Vector3(fx1 - fx0, 1.2f, 0.25f));
+            AddFenceCollider(group, new Vector3(fx0, 0.6f, (fz0 + fz1) / 2f), new Vector3(0.25f, 1.2f, fz0 - fz1));
+            AddFenceCollider(group, new Vector3(fx1, 0.6f, (fz0 + fz1) / 2f), new Vector3(0.25f, 1.2f, fz0 - fz1));
+
+            // pila di regali già caricati accanto alla slitta
             MeshBuilder gifts = new MeshBuilder();
-            ModelKit.Begin("DockGifts");
+            ModelKit.Begin("YardGifts");
             FurnitureModels.AddGift(gifts, new Vector3(0f, 0f, 0f), new Vector3(0.7f, 0.55f, 0.6f), "ClothBlue", "Gold", 15f);
             FurnitureModels.AddGift(gifts, new Vector3(0.8f, 0f, 0.15f), new Vector3(0.5f, 0.4f, 0.5f), "RedSanta", "Cream", -20f);
             FurnitureModels.AddGift(gifts, new Vector3(0.15f, 0.55f, 0f), new Vector3(0.4f, 0.35f, 0.4f), "GreenElf", "Gold", 40f);
-            GameObject giftPile = new GameObject("DockGifts");
+            GameObject giftPile = new GameObject("YardGifts");
             ModelKit.Part(giftPile.transform, "Mesh", gifts);
-            Place(giftPile.transform, group, new Vector3(16.2f, 0f, -3.6f), 25f);
-            return sleigh;
-        }
+            Place(giftPile.transform, group, SleighPos + new Vector3(-1.2f, 0f, -2.3f), 25f);
 
-        // ============================================================================ decorazioni del salone
-        private static void BuildDecor(Transform parent)
-        {
-            Transform group = new GameObject("Decor").transform;
-            group.SetParent(parent, false);
-
-            // tappeti
-            GameObject rug = PropModels.BuildRug(null, 10f, 6.5f);
-            Place(rug.transform, group, new Vector3(0f, 0f, -1.5f), 0f);
-            GameObject rug2 = PropModels.BuildRug(null, 5f, 3.4f);
-            Place(rug2.transform, group, new Vector3(11f, 0f, 5.2f), 0f);
-            GameObject rug3 = PropModels.BuildRug(null, 3.6f, 2.4f);
-            Place(rug3.transform, group, new Vector3(-6.5f, 0f, 4.4f), 0f);
-
-            // tavolo espositore al centro
-            GameObject display = DecorModels.BuildDisplayTable(null);
-            Place(display.transform, group, new Vector3(-1f, 0f, -2.5f), 0f);
-            AddBlob(new Vector3(-1f, 0f, -2.5f), new Vector2(2.8f, 2.8f));
-
-            // lampadario sopra il tavolo
-            Vector3 chandelierLight;
-            GameObject chandelier = DecorModels.BuildChandelier(null, 1.4f, out chandelierLight);
-            Place(chandelier.transform, group, new Vector3(-1f, ShellModels.WallHeight, -2.5f), 0f);
-            AddPointLight(chandelier.transform, "ChandelierLight", chandelierLight, new Color(1f, 0.82f, 0.55f), 3.0f, 13f, false);
-
-            // albero di Natale grande nell'angolo sud-ovest
-            List<Renderer> treeBulbs;
-            List<Color> treeColors;
-            GameObject tree = PropModels.BuildChristmasTree(null, out treeBulbs, out treeColors);
-            Place(tree.transform, group, new Vector3(-11.2f, 0f, -7.4f), 20f);
-            BulbRenderers.AddRange(treeBulbs);
-            BulbColors.AddRange(treeColors);
-            AddPointLight(tree.transform, "TreeGlow", new Vector3(0f, 2.0f, 1.6f), new Color(1f, 0.85f, 0.55f), 1.6f, 6.5f, false);
-            AddBlob(new Vector3(-11.2f, 0f, -7.4f), new Vector2(4.2f, 4.2f));
-
-            // casse e barili sparsi
-            GameObject crate1 = PropModels.BuildCrate(null, new Vector3(0.95f, 0.75f, 0.95f), false);
-            Place(crate1.transform, group, new Vector3(-12.6f, 0f, -9.0f), 8f);
-            GameObject crate2 = PropModels.BuildCrate(null, new Vector3(0.8f, 0.65f, 0.8f), false);
-            Place(crate2.transform, group, new Vector3(-12.5f, 0.75f, -8.95f), -14f);
-            GameObject crate3 = PropModels.BuildCrate(null, new Vector3(0.85f, 0.7f, 0.85f), false);
-            Place(crate3.transform, group, new Vector3(-9.2f, 0f, -9.1f), -5f);
-            GameObject crate4 = PropModels.BuildCrate(null, new Vector3(0.9f, 0.7f, 0.9f), false);
-            Place(crate4.transform, group, new Vector3(12.5f, 0f, -9.0f), 12f);
-            GameObject crate5 = PropModels.BuildCrate(null, new Vector3(0.8f, 0.6f, 0.8f), false);
-            Place(crate5.transform, group, new Vector3(11.5f, 0f, -9.1f), -8f);
-            AddBlob(new Vector3(-12.6f, 0f, -9.0f), new Vector2(1.8f, 1.8f));
-            AddBlob(new Vector3(-9.2f, 0f, -9.1f), new Vector2(1.5f, 1.5f));
-            AddBlob(new Vector3(12.0f, 0f, -9.0f), new Vector2(3.0f, 1.8f));
-            GameObject barrel1 = PropModels.BuildBarrel(null, true);
-            Place(barrel1.transform, group, new Vector3(-7.8f, 0f, -9.0f), 0f);
-            GameObject barrel2 = PropModels.BuildBarrel(null, false);
-            Place(barrel2.transform, group, new Vector3(-7.0f, 0f, -8.3f), 30f);
-            GameObject barrel3 = PropModels.BuildBarrel(null, true);
-            Place(barrel3.transform, group, new Vector3(9.8f, 0f, -9.0f), 60f);
-            AddBlob(new Vector3(-7.4f, 0f, -8.7f), new Vector2(2.2f, 1.9f));
-            AddBlob(new Vector3(9.8f, 0f, -9.0f), new Vector2(1.2f, 1.2f));
-
-            // pila di regali vicino alla porta
-            MeshBuilder gifts = new MeshBuilder();
-            ModelKit.Begin("GiftPile");
-            FurnitureModels.AddGift(gifts, new Vector3(0f, 0f, 0f), new Vector3(0.55f, 0.45f, 0.5f), "RedSanta", "Gold", 12f);
-            FurnitureModels.AddGift(gifts, new Vector3(0.62f, 0f, 0.1f), new Vector3(0.42f, 0.34f, 0.42f), "ClothBlue", "Cream", -18f);
-            FurnitureModels.AddGift(gifts, new Vector3(0.1f, 0.45f, 0f), new Vector3(0.36f, 0.3f, 0.36f), "GreenElf", "Gold", 35f);
-            GameObject giftPile = new GameObject("GiftPile");
-            ModelKit.Part(giftPile.transform, "Mesh", gifts);
-            Place(giftPile.transform, group, new Vector3(12.0f, 0f, -4.2f), 20f);
-
-            // lampade appese sopra i banchi (ognuna con la sua luce calda)
-            float[] lampX = { ConstructionBenchPos.x, PaintBenchPos.x, WrapBenchPos.x };
-            for (int i = 0; i < lampX.Length; i++)
-            {
-                GameObject lamp = PropModels.BuildHangingLamp(null, 1.5f);
-                Place(lamp.transform, group, new Vector3(lampX[i], ShellModels.WallHeight, 6.8f), 0f);
-                AddPointLight(lamp.transform, "LampLight", new Vector3(0f, -1.5f - 0.28f, 0f), new Color(1f, 0.78f, 0.5f), 2.6f, 9f, false);
-            }
-            // luci d'ambiente morbide per gli scaffali
-            AddPointLight(group, "ShelfLight_A", new Vector3(-11.5f, 3.2f, 3.5f), new Color(1f, 0.82f, 0.55f), 1.6f, 9f, false);
-            AddPointLight(group, "ShelfLight_B", new Vector3(-11.5f, 3.2f, -3.0f), new Color(1f, 0.82f, 0.55f), 1.6f, 9f, false);
-
-            // lampeggio delle lucine
-            GameObject twinkleObject = new GameObject("TwinkleLights");
-            twinkleObject.transform.SetParent(group, false);
-            TwinkleLights twinkle = twinkleObject.AddComponent<TwinkleLights>();
-            twinkle.EditorSetup(BulbRenderers.ToArray(), BulbColors.ToArray());
-            EditorUtility.SetDirty(twinkle);
-        }
-
-        // ============================================================================ angolo caminetto (zona relax)
-        private static void BuildLounge(Transform parent)
-        {
-            Transform group = new GameObject("Lounge").transform;
-            group.SetParent(parent, false);
-
-            Light fireLight;
-            GameObject fireplace = DecorModels.BuildFireplace(null, ShellModels.WallHeight, out fireLight);
-            Place(fireplace.transform, group, new Vector3(11f, 0f, ShellModels.HalfDepth - 0.55f), 180f);
-            AddBlob(new Vector3(11f, 0f, 9.0f), new Vector2(5.0f, 3.2f));
-
-            GameObject chairA = DecorModels.BuildArmchair(null, "RedSanta");
-            Place(chairA.transform, group, new Vector3(9.0f, 0f, 5.9f), 205f);
-            GameObject chairB = DecorModels.BuildArmchair(null, "GreenElf");
-            Place(chairB.transform, group, new Vector3(13.0f, 0f, 5.9f), 155f);
-            GameObject table = DecorModels.BuildSideTable(null);
-            Place(table.transform, group, new Vector3(11f, 0f, 5.3f), 0f);
-            AddBlob(new Vector3(9.0f, 0f, 5.9f), new Vector2(1.7f, 1.7f));
-            AddBlob(new Vector3(13.0f, 0f, 5.9f), new Vector2(1.7f, 1.7f));
-            AddBlob(new Vector3(11f, 0f, 5.3f), new Vector2(1.1f, 1.1f));
-        }
-
-        // ============================================================================ esterno: pupazzi di neve, abeti
-        private static void BuildOutdoors(Transform parent)
-        {
-            Transform group = new GameObject("Outdoors").transform;
-            group.SetParent(parent, false);
-
+            // ---- pupazzi di neve e abeti ------------------------------------------------------------
             GameObject snowman = PropModels.BuildSnowman(null);
-            Place(snowman.transform, group, new Vector3(20.5f, 0f, 8.6f), 200f);
+            Place(snowman.transform, group, new Vector3(-6.5f, 0f, -12.5f), 160f);
             GameObject snowman2 = PropModels.BuildSnowman(null);
             snowman2.transform.localScale = Vector3.one * 0.7f;
-            Place(snowman2.transform, group, new Vector3(22.2f, 0f, 7.8f), 170f);
+            Place(snowman2.transform, group, new Vector3(-8.4f, 0f, -13.6f), 140f);
 
-            // anello di abeti innevati attorno al laboratorio (posizioni pseudo-casuali ma sempre uguali)
             System.Random rng = new System.Random(7);
             int placed = 0;
-            for (int attempt = 0; attempt < 400 && placed < 70; attempt++)
+            for (int attempt = 0; attempt < 500 && placed < 60; attempt++)
             {
-                float x = (float)(rng.NextDouble() * 80.0 - 40.0);
-                float z = (float)(rng.NextDouble() * 70.0 - 35.0);
-                // niente alberi dentro o troppo vicino al laboratorio e alla banchina
-                bool nearHall = x > -19f && x < 19f && z > -15f && z < 15f;
-                bool nearDock = x > 12f && x < 31f && z > -12f && z < 12f;
-                if (nearHall || nearDock) continue;
-                float height = 5f + (float)rng.NextDouble() * 4f;
+                float x = (float)(rng.NextDouble() * 76.0 - 38.0);
+                float z = (float)(rng.NextDouble() * 64.0 - 38.0);
+                // niente alberi sull'edificio, nel cortile o troppo vicino
+                bool nearHouse = x > -17f && x < 11f && z > -5f && z < 9f;
+                bool inYard = x > -13.5f && x < 14.5f && z > -21f && z < -5f;
+                if (nearHouse || inYard) continue;
+                float height = 4.5f + (float)rng.NextDouble() * 4f;
                 GameObject pine = PropModels.BuildPine(null, height);
                 Place(pine.transform, group, new Vector3(x, 0f, z), (float)(rng.NextDouble() * 360.0));
                 placed++;
             }
+        }
+
+        private static void AddFenceCollider(Transform parent, Vector3 center, Vector3 size)
+        {
+            GameObject go = new GameObject("FenceCollider");
+            go.transform.SetParent(parent, false);
+            ModelKit.AddBoxCollider(go, center, size);
         }
 
         private static Light AddPointLight(Transform parent, string name, Vector3 localPos, Color color, float intensity, float range, bool flicker)
@@ -584,25 +697,26 @@ namespace Elfshift.EditorTools
         // ============================================================================ luci, neve, volume
         private static Light BuildLighting(Transform parent)
         {
+            // luce di luna fredda dall'alto (le finestre e il cortile prendono un tono blu, l'interno resta caldo)
             GameObject sunObject = new GameObject("MainLight");
             sunObject.transform.SetParent(parent, false);
-            sunObject.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+            sunObject.transform.rotation = Quaternion.Euler(50f, -32f, 0f);
             Light sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.color = new Color(1f, 0.87f, 0.7f);
-            sun.intensity = 1.1f;
+            sun.color = new Color(0.78f, 0.84f, 1f);
+            sun.intensity = 0.75f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.85f;
+            sun.shadowStrength = 0.8f;
             RenderSettings.sun = sun;
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.46f, 0.55f, 0.78f);
-            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.38f, 0.46f);
-            RenderSettings.ambientGroundColor = new Color(0.22f, 0.2f, 0.24f);
+            RenderSettings.ambientSkyColor = new Color(0.5f, 0.52f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.46f, 0.4f, 0.42f);
+            RenderSettings.ambientGroundColor = new Color(0.25f, 0.21f, 0.22f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogDensity = 0.016f;
-            RenderSettings.fogColor = new Color(0.1f, 0.15f, 0.3f);
+            RenderSettings.fogDensity = 0.018f;
+            RenderSettings.fogColor = new Color(0.12f, 0.16f, 0.3f);
 
             EffectsBuilder.CreatePostProcessing(parent, "Assets/Settings/WorkshopVolumeProfile.asset");
             return sun;
@@ -611,12 +725,12 @@ namespace Elfshift.EditorTools
         private static GameObject BuildWeather()
         {
             GameObject weather = new GameObject("Weather");
-            // Neve fuori dalle finestre, sulla banchina e attorno al laboratorio.
+            // Neve sul cortile e attorno alla bottega (non dentro: il tetto la ferma).
             EffectsBuilder.CreateStars(weather.transform, "Stars", particleMaterial);
-            EffectsBuilder.CreateSnow(weather.transform, "Snow_North", new Vector3(4f, 12f, 26f), new Vector3(90f, 1f, 30f), 260f, particleMaterial);
-            EffectsBuilder.CreateSnow(weather.transform, "Snow_South", new Vector3(4f, 12f, -26f), new Vector3(90f, 1f, 30f), 260f, particleMaterial);
-            EffectsBuilder.CreateSnow(weather.transform, "Snow_Dock", new Vector3(25f, 12f, 0f), new Vector3(22f, 1f, 40f), 140f, particleMaterial);
-            EffectsBuilder.CreateSnow(weather.transform, "Snow_West", new Vector3(-26f, 12f, 0f), new Vector3(20f, 1f, 50f), 140f, particleMaterial);
+            EffectsBuilder.CreateSnow(weather.transform, "Snow_Yard", new Vector3(0f, 12f, -16f), new Vector3(40f, 1f, 22f), 260f, particleMaterial);
+            EffectsBuilder.CreateSnow(weather.transform, "Snow_North", new Vector3(-2f, 12f, 16f), new Vector3(60f, 1f, 18f), 200f, particleMaterial);
+            EffectsBuilder.CreateSnow(weather.transform, "Snow_East", new Vector3(20f, 12f, 0f), new Vector3(20f, 1f, 30f), 140f, particleMaterial);
+            EffectsBuilder.CreateSnow(weather.transform, "Snow_West", new Vector3(-26f, 12f, 0f), new Vector3(20f, 1f, 40f), 140f, particleMaterial);
             return weather;
         }
 
@@ -646,10 +760,11 @@ namespace Elfshift.EditorTools
             camObject.transform.localPosition = new Vector3(0f, 1.62f, 0.05f);
             Camera cam = camObject.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.04f, 0.06f, 0.14f);
+            cam.backgroundColor = new Color(0.05f, 0.07f, 0.15f);
             cam.fieldOfView = 68f;
-            cam.nearClipPlane = 0.05f;
-            cam.farClipPlane = 260f;
+            // piano vicino non troppo piccolo: migliora la precisione della profondità (niente "sfarfallio" dei tappeti)
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 220f;
             camObject.AddComponent<AudioListener>();
 
             UniversalAdditionalCameraData extra = cam.GetUniversalAdditionalCameraData();
@@ -683,7 +798,7 @@ namespace Elfshift.EditorTools
             Wire.Ref(interactor, "input", input);
             Wire.Ref(look, "input", input);
             player.transform.position = PlayerStart;
-            player.transform.rotation = Quaternion.identity;
+            player.transform.rotation = Quaternion.Euler(0f, PlayerStartYaw, 0f);
             return player;
         }
     }

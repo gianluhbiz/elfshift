@@ -283,8 +283,8 @@ namespace Elfshift.EditorTools
             mb.Ring("Gold", new Vector3(0f, 0.84f, 0f), 0.96f, 0.014f, Vector3.zero, 28, 6);
             }
             // giocattoli in vetrina (sul centrino, a 0,85 m)
-            AddTeddy(mb, new Vector3(-0.4f, 0.85f, 0.15f), 0.9f, "CookieBrown", 25f);
-            AddRobot(mb, new Vector3(0.4f, 0.85f, 0.1f), 0.9f, "ClothTeal", -20f);
+            AddTeddy(mb, new Vector3(-0.4f, 0.85f, 0.15f), 0.9f, "CookieBrown", 200f);
+            AddRobot(mb, new Vector3(0.4f, 0.85f, 0.1f), 0.9f, "ClothTeal", 160f);
             AddDrum(mb, new Vector3(0.05f, 0.85f, -0.45f), 1.0f);
             AddBlocks(mb, new Vector3(-0.2f, 0.85f, -0.4f), 1.2f);
             AddSpinTop(mb, new Vector3(0.35f, 0.85f, -0.35f), 1.2f, "ClothPink");

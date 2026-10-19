@@ -1,9 +1,9 @@
-# Il Laboratorio di Babbo Natale — Fase 1: prototipo 3D giocabile
+# Il Laboratorio di Babbo Natale — prototipo 3D giocabile
 
 Gioco natalizio 3D in **prima persona** per PC (Windows), sviluppato con **Unity 6** e C#.
 Tu gestisci il laboratorio degli elfi al Polo Nord: arrivano le letterine dei bambini, costruisci i giocattoli e li porti alla slitta prima che scada il tempo.
 
-> **Stato:** Fase 1 di 6. Il ciclo base è giocabile (visuale in prima persona): *prendi il legno → posalo sul banco → costruisci il trenino → consegnalo alla slitta → ricevi punti e biscotti*.
+> **Stato:** prototipo giocabile in prima persona (Fase 1 completa e parte della Fase 2): *ritira le letterine → prendi i materiali → costruisci → dipingi → incarta → carica sulla slitta*, tenendo acceso il camino, in una giornata di 8 minuti con le stelle finali.
 
 ---
 
@@ -85,32 +85,37 @@ Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene b
 | **W A S D** o **frecce** (o stick sinistro) | Muoversi |
 | **Maiusc sinistro** (o pressione dello stick sinistro) | **Scattare** (tenuto premuto, solo in avanti) |
 | **Spazio** (o pulsante A) | **Saltare** |
-| **Tasto sinistro del mouse** (o grilletto destro) | **Prendere / posare / consegnare** |
-| **E** o **tasto destro del mouse** (tenuto premuto) — o pulsante X | Costruire sul banco |
+| **Tasto sinistro del mouse** (o grilletto destro) | **Prendere / posare / consegnare / usare** (es. ritirare le letterine) |
+| **E** o **tasto destro del mouse** (tenuto premuto) — o pulsante X | Lavorare sul banco (costruire, dipingere, incartare) |
+| **Invio** (o Start) | Nuovo giorno, nel riepilogo di fine giornata |
 | **Esc** | Libera il cursore dalla finestra di gioco |
 
-**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un puntino al centro dello schermo che diventa dorato quando puoi interagire. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
+**Cosa devi vedere:** dagli occhi dell'elfo, la **Bottega degli Elfi**: un laboratorio di legno raccolto e pieno di cose (boiserie, travi, festoni, lucine, lampade, un tavolo con i giocattoli, l'albero di Natale), con a ovest un **arco** che porta al **magazzino** e a sud la **porta** sul **cortile innevato**, dove ci sono la **slitta con le renne**, la **cassetta delle letterine**, lanterne, pupazzi di neve e abeti. Vedi le tue muffole rosse e un puntino al centro dello schermo che diventa dorato quando puoi interagire.
 
-**Importante:** si interagisce con ciò che *guardi*. Per usare uno scaffale, un banco o la slitta devi essere vicino **e** rivolto verso di loro.
+In alto: a sinistra **punti e biscotti** (e la **serie** di consegne), al centro le **letterine** aperte con il loro tempo e la riga **Obiettivo**, che dice sempre il prossimo passo; a destra l'**orologio della giornata**, il **calore del camino** e la **posta** in attesa. Una **freccia dorata** fluttua sopra il posto dove andare.
 
-**Il ciclo da provare:**
-1. Segui la **freccia dorata** fino allo **scaffale del legno** (parete sinistra, insegna con un tronchetto) e guardalo. Se sei ancora lontano compare *«Avvicinati: Scaffale del legno»*. Quando sei vicino compare `[CLIC SX] Prendi Legno` → premi il **tasto sinistro del mouse**: il legno è in mano.
-2. Vai al **primo banco** (quello più a sinistra, con martello e morsa) (quello con martello e morsa, sulla parete di fronte) e guardalo → `[CLIC SX] Metti sul banco` → **clic sinistro**.
-3. Torna a prendere un **secondo legno** e posalo sul banco. Compare `[E] Tieni premuto: costruisci Trenino` (puoi usare anche il tasto destro del mouse).
-4. Tieni premuto **E** per 2,5 secondi: l'elfo martella, la barra si riempie, compaiono scintille e il trenino appare sul banco.
-5. **Clic sinistro** sul banco per prendere il trenino.
-6. Portalo alla **slitta** (esci dalla porta a destra) → `[CLIC SX] Consegna alla slitta` → **clic sinistro**.
-7. Vedi coriandoli, il messaggio *«Trenino consegnato! +… punti +5 biscotti»* e punti/biscotti salgono in alto a sinistra. Poco dopo arriva un nuovo ordine.
+**Importante:** si interagisce con ciò che *guardi*. Per usare scaffali, banchi, camino, cassetta o slitta devi essere vicino **e** rivolto verso di loro.
+
+**Il ciclo di gioco (segui l'Obiettivo in alto):**
+1. **Ritira le letterine**: esci dalla porta e fai clic sulla **cassetta delle letterine** (bandierina alzata = c'è posta). Il tempo di una letterina parte solo quando la ritiri. Possono essere aperte fino a 3 letterine insieme.
+2. **Prendi i materiali** nel **magazzino** (arco a ovest): legno per il **trenino**, stoffa per l'**orsetto**, metallo per il **robot**. Ne servono **2**.
+3. **Banco di costruzione** (il primo a sinistra): posa i 2 materiali e **tieni premuto E** → giocattolo *grezzo*.
+4. **Banco dei colori** (al centro): posa il giocattolo grezzo e tieni premuto E → giocattolo **dipinto**.
+5. **Banco dei pacchi** (parete est): posa il giocattolo dipinto e tieni premuto E → **pacco**.
+6. Porta il **pacco** alla **slitta** nel cortile → clic sinistro. Coriandoli, punti e biscotti!
+
+**Cose che ti tengono occupato:**
+- **Il camino** (angolo sud-ovest) si spegne piano piano: portaci un **legno** e fai clic. Con il fuoco vivace i banchi lavorano più in fretta; quasi spento (barretta blu) tutti i banchi diventano **lenti**.
+- **Serie di consegne:** ogni consegna di fila vale di più (×1,25, ×1,5 … fino a ×2). Se una letterina scade, la serie riparte da zero e perdi 25 punti.
+- **La giornata dura 8 minuti.** A fine giornata non arrivano più letterine, hai qualche secondo per consegnare quelle aperte e poi vedi il **riepilogo** con 1, 2 o 3 **stelle** (300, 700, 1200 punti). Premi **Invio** per un nuovo giorno.
 
 **Come verificare che le regole siano corrette:**
-- Lontano da scaffali e banchi il clic non fa nulla di utile e compare un messaggio: le azioni dipendono dalla posizione.
-- Alla slitta con il *legno* in mano: *«Nessun ordine aperto per questo oggetto»*.
-- Con il banco pieno o con un oggetto inutile: il banco lo rifiuta con un messaggio.
-- Clic lontano da tutto con un oggetto in mano → lo posa a terra davanti a te; riavvicinati e clic per riprenderlo.
-- **Spazio** ti fa saltare (puoi anche saltare con l'oggetto in mano).
-- Se lasci scadere la letterina: *«Ordine scaduto!»* e perdi 20 punti.
-- Mentre tieni premuto E ti allontani o rilasci il tasto: la costruzione si annulla.
-- Premere E senza avere 2 legni sul banco mostra *«Niente da costruire…»*.
+- Alla slitta con un giocattolo non incartato: *«Nessuna letterina chiede questo: va prima incartato?»*.
+- Un materiale sbagliato su un banco viene rifiutato (*«Questo non serve qui»*); un banco già pieno dice *«Il banco è pieno»*.
+- Se sbagli, fai clic sul banco a mani vuote per riprendere l'ultimo oggetto posato.
+- Clic lontano da tutto con un oggetto in mano → lo posa a terra; riavvicinati e clic per riprenderlo.
+- Nel camino va solo la legna; se il fuoco è già al massimo te lo dice.
+- Mentre tieni premuto E ti allontani o rilasci il tasto: il lavoro si annulla.
 
 ## 6. Struttura del progetto
 
@@ -122,10 +127,11 @@ Assets/
     Player/                Elfo: movimento, sguardo in prima persona, interazione, mani
     Interaction/           Sistema di interazione (basato sulla distanza)
     Production/            Oggetti nel mondo, scaffali, banchi di lavoro
-    Orders/                Ordini, timer, slitta
+    Orders/                Letterine (ordini), cassetta della posta, slitta
     UI/                    Interfaccia (HUD, letterine, messaggi, icone)
     Vfx/                   Luci che tremolano, lucine di Natale, oggetti che ondeggiano
-    Progression/, Audio/   (vuote: arriveranno nelle fasi successive)
+    Progression/           Giornata di lavoro e riepilogo con le stelle
+    Audio/                 (vuota: arriverà nelle fasi successive)
   Editor/                  Strumenti che costruiscono tutto da soli (menu "Elfshift")
   Tests/EditMode/          Test automatici della logica delle ricette
   Scenes/ Prefabs/ Models/ Materials/ Textures/ Animations/ Audio/ Settings/
@@ -134,13 +140,13 @@ Assets/
 ```
 
 I **dati di gioco** sono asset che puoi modificare dall'Inspector senza toccare il codice (`Assets/Settings/Data`):
-- `Item_*.asset` — oggetti (nome, stato, modello 3D);
-- `Recipe_*.asset` — ricette (ingredienti → prodotto, secondi di lavorazione);
-- `Order_*.asset` — letterine (oggetto richiesto, tempo, punti, biscotti, penale).
+- `Item_*.asset` — oggetti (nome, stato, modello 3D): materiali, giocattoli grezzi (`*Raw`), dipinti (`*Painted`) e pacchi (`*Gift`);
+- `Recipe_*.asset` — ricette (ingredienti → prodotto, banco, secondi di lavorazione): `*Build`, `*Paint`, `*Wrap`;
+- `Order_*.asset` — letterine (pacco richiesto, giocattolo disegnato sulla letterina, tempo, punti, biscotti, penale).
 
-Prova: seleziona `Recipe_Train` e cambia *Craft Seconds* a 1; oppure seleziona `Order_Train` e cambia *Time Limit Seconds*.
+Prova: seleziona `Recipe_TrainBuild` e cambia *Craft Seconds* a 1; oppure seleziona `Order_Teddy` e cambia *Time Limit Seconds*.
 
-Il numero di ordini contemporanei si cambia nell'oggetto `_Game` → componente *Order Manager* → *Max Active*.
+Nell'oggetto `_Game`: *Order Manager* → *Max Active* (letterine aperte insieme), *Max Pending* (letterine nella cassetta), *Next Order Delay* (ogni quanto arriva posta); *Day Cycle* → *Day Length* (durata della giornata) e *Star Thresholds* (punti per le stelle). Il camino (oggetto `Fireplace`) ha i valori del calore.
 
 ## 7. Sostituire i modelli provvisori con modelli definitivi
 
@@ -171,9 +177,9 @@ Strumenti gratuiti utili per i modelli definitivi: **Blender** (<https://www.ble
 
 ## 10. Cosa c'è e cosa manca
 
-**Fase 1 (questa):** ambiente 3D, elfo con camminata/trasporto/lavoro, telecamera in prima persona con mouse-look, scaffale del legno, banco di costruzione con ricetta, slitta, ordine con timer, punti e biscotti, interfaccia, neve, luci, test della logica.
+**Adesso:** bottega con magazzino e cortile, 3 materiali, 3 giocattoli, 3 banchi (costruzione, colori, pacchi), letterine nella cassetta della posta, fino a 3 ordini insieme, camino da alimentare, serie di consegne, giornata di 8 minuti con riepilogo e stelle, guida "Obiettivo" sempre attiva, interfaccia, neve, luci, test della logica.
 
-**Prossime fasi:** 2) tutte le postazioni (vernice, pacchi), più materiali/giocattoli, più ordini; 3) dieci giornate, stelle, salvataggio; 4) negozio e aiutante; 5) imprevisti, menu, pausa, opzioni, audio; 6) build Windows, itch.io, Steam.
+**Prossime fasi:** più giocattoli e ricette miste, dieci giornate di fila con salvataggio, negozio dei miglioramenti con i biscotti, aiutante, imprevisti, menu, pausa, opzioni, audio, build per Windows/Steam.
 
 Nota sulla visuale: la Fase 1 è in **prima persona** (telecamera all'altezza degli occhi, mouse per guardare). Il modello dell'elfo con le sue animazioni resta nel prefab e proietta l'ombra; tornerà visibile se in futuro vorremo una vista in terza persona.
 

@@ -281,10 +281,17 @@ def log_bundle(origin, scale=1.0):
     log((ox, oy + r, oz - r * 1.05), r, ln, roll=random.uniform(-2, 2))
     log((ox, oy + r, oz + r * 1.05), r, ln, roll=random.uniform(-2, 2))
     log((ox, oy + r + r * 1.8, oz), r, ln, roll=random.uniform(-2, 2))
-    ring_r = r * 2.24
+    # nastro che abbraccia i tre tronchi (triangolo arrotondato attorno alle sezioni)
+    centers = [(oy + r, oz - r * 1.05), (oy + r, oz + r * 1.05), (oy + r * 2.8, oz)]
     for i in (-1, 1):
-        band = utorus("Nastro", (ox + i * 0.15 * scale, oy + r * 1.6, oz), ring_r, 0.018 * scale, "RedSanta", rot=(0, 0, 90), mseg=20, nseg=4)
-        flatten(band, 1.8, 1.0, 1.0)
+        x = ox + i * 0.15 * scale
+        pts = []
+        for j in range(41):
+            t = 2 * math.pi * j / 40
+            dy, dz = math.cos(t), math.sin(t)
+            cy, cz = max(centers, key=lambda c: c[0] * dy + c[1] * dz)
+            pts.append((x, cy + dy * (r + 0.008), cz + dz * (r + 0.008)))
+        ribbon("Nastro", pts, 0.04 * scale, 0.012, "RedSanta", normal=(1, 0, 0))
     bow((ox + 0.15 * scale, oy + r * 3.15, oz), 0.11 * scale, "RedSanta", yaw=90)
 
 

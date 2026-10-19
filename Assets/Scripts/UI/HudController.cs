@@ -1,6 +1,8 @@
 using Elfshift.Core;
 using Elfshift.Orders;
 using Elfshift.Player;
+using Elfshift.Production;
+using Elfshift.Progression;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,11 +24,17 @@ namespace Elfshift.UI
         [SerializeField] private FloatingTextSpawner floatingTexts;
         [SerializeField] private UiPop pointsIconPop;
         [SerializeField] private UiPop cookiesIconPop;
+        [Header("Avvisi di gioco (facoltativi)")]
+        [SerializeField] private Fireplace fireplace;
+        [SerializeField] private DayCycle day;
 
         private float pointsPunch;
         private float cookiesPunch;
         private int shownPoints = -1;
         private int shownCookies = -1;
+        private bool warnedFireLow;
+        private bool warnedFireOut;
+        private bool warnedLastMinute;
 
         private void OnEnable()
         {
@@ -38,7 +46,10 @@ namespace Elfshift.UI
             session.Changed += RefreshStats;
             orders.OrderCompleted += OnOrderCompleted;
             orders.OrderFailed += OnOrderFailed;
+            orders.MailArrived += OnMailArrived;
+            session.StreakChanged += OnStreakChanged;
             interactor.MessageRaised += OnMessage;
+            if (day != null) day.Closing += OnDayClosing;
             RefreshStats();
         }
 
@@ -55,7 +66,10 @@ namespace Elfshift.UI
             {
                 orders.OrderCompleted -= OnOrderCompleted;
                 orders.OrderFailed -= OnOrderFailed;
+                orders.MailArrived -= OnMailArrived;
             }
+            if (session != null) session.StreakChanged -= OnStreakChanged;
+            if (day != null) day.Closing -= OnDayClosing;
             if (interactor != null) interactor.MessageRaised -= OnMessage;
         }
 
@@ -63,6 +77,41 @@ namespace Elfshift.UI
         {
             AnimatePunch(pointsText, ref pointsPunch);
             AnimatePunch(cookiesText, ref cookiesPunch);
+            CheckWarnings();
+        }
+
+        /// <summary>Avvisi una sola volta per "episodio": fuoco basso, fuoco spento, ultimo minuto.</summary>
+        private void CheckWarnings()
+        {
+            if (toast == null) return;
+            if (fireplace != null)
+            {
+                float w = fireplace.Warmth01;
+                if (w < 0.35f && !warnedFireLow) { warnedFireLow = true; toast.Show(UiText.FireLow, 3.5f); }
+                if (w > 0.5f) warnedFireLow = false;
+                if (fireplace.IsCold && !warnedFireOut) { warnedFireOut = true; toast.Show(UiText.FireOut, 3.5f); }
+                if (!fireplace.IsCold) warnedFireOut = false;
+            }
+            if (day != null && !warnedLastMinute && !day.IsClosing && !day.IsOver && day.TimeLeft <= 60f)
+            {
+                warnedLastMinute = true;
+                toast.Show(UiText.LastMinute, 3f);
+            }
+        }
+
+        private void OnMailArrived(Order order)
+        {
+            if (toast != null) toast.Show(UiText.NewLetter, 2.5f);
+        }
+
+        private void OnStreakChanged(int streak)
+        {
+            // La serie si vede nella pillola "Serie xN" e nel messaggio di consegna: qui niente avvisi doppi.
+        }
+
+        private void OnDayClosing()
+        {
+            if (toast != null) toast.Show(UiText.DayClosing, 4f);
         }
 
         private void RefreshStats()
@@ -99,7 +148,11 @@ namespace Elfshift.UI
         private void OnOrderCompleted(Order order, OrderResult result)
         {
             if (toast != null)
-                toast.Show(UiText.Delivered(order.Definition.RequestedItem.DisplayName, result.Points, result.Cookies));
+            {
+                string text = UiText.Delivered(order.Definition.LetterItem.DisplayName, result.Points, result.Cookies);
+                if (result.Multiplier > 1.001f) text += "   (" + UiText.StreakTitle + " x" + result.Multiplier.ToString("0.##") + ")";
+                toast.Show(text);
+            }
         }
 
         private void OnOrderFailed(Order order)

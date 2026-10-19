@@ -12,6 +12,8 @@ namespace Elfshift.Orders
     {
         [Tooltip("Oggetto da consegnare alla slitta (deve essere nello stato richiesto, es. Trenino).")]
         [SerializeField] private ItemDefinition requestedItem;
+        [Tooltip("Oggetto disegnato sulla letterina (es. il trenino dipinto, anche se va consegnato il pacco). Se vuoto: l'oggetto richiesto.")]
+        [SerializeField] private ItemDefinition letterItem;
         [Min(10f)]
         [SerializeField] private float timeLimitSeconds = 120f;
         [Min(0)] [SerializeField] private int rewardPoints = 100;
@@ -24,6 +26,7 @@ namespace Elfshift.Orders
         [SerializeField] private int failPenaltyPoints = 20;
 
         public ItemDefinition RequestedItem => requestedItem;
+        public ItemDefinition LetterItem => letterItem != null ? letterItem : requestedItem;
         public float TimeLimitSeconds => timeLimitSeconds;
         public int RewardPoints => rewardPoints;
         public int RewardCookies => rewardCookies;
@@ -31,9 +34,10 @@ namespace Elfshift.Orders
         public int FailPenaltyPoints => failPenaltyPoints;
 
 #if UNITY_EDITOR
-        public void EditorSetup(ItemDefinition item, float seconds, int points, int cookies, int bonus, int penalty)
+        public void EditorSetup(ItemDefinition item, float seconds, int points, int cookies, int bonus, int penalty, ItemDefinition shownOnLetter = null)
         {
             requestedItem = item;
+            letterItem = shownOnLetter;
             timeLimitSeconds = seconds;
             rewardPoints = points;
             rewardCookies = cookies;

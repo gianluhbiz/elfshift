@@ -35,4 +35,15 @@ namespace Elfshift.Interaction
         void HoldCancelled();
         void HoldCompleted();
     }
+
+    /// <summary>
+    /// Qualcosa che si "usa" con un clic a mani vuote, senza prendere oggetti (es. la cassetta delle letterine).
+    /// </summary>
+    public interface IUsable
+    {
+        bool CanUse { get; }
+        /// <summary>Testo mostrato al giocatore (es. "Ritira 2 letterine").</summary>
+        string UsePrompt { get; }
+        void Use();
+    }
 }
