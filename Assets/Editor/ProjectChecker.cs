@@ -48,6 +48,18 @@ namespace Elfshift.EditorTools
             return report;
         }
 
+        /// <summary>Vero se il progetto è configurato correttamente (usato dal menu tramite reflection).</summary>
+        public static bool IsOk()
+        {
+            return Run().Ok;
+        }
+
+        /// <summary>Testo del risultato della verifica (usato dal menu tramite reflection).</summary>
+        public static string Summary()
+        {
+            return Format(Run());
+        }
+
         /// <summary>Legge "Active Input Handling" dalle impostazioni del progetto: 0 = vecchio, 1 = nuovo, 2 = entrambi. -1 = sconosciuto.</summary>
         private static int ReadActiveInputHandler()
         {

@@ -54,6 +54,18 @@ namespace Elfshift.EditorTools
             RectTransform safe = NewRect("SafeArea", canvasObject.transform);
             Stretch(safe, 24f);
 
+            // mirino al centro dello schermo
+            RectTransform crosshair = NewRect("Crosshair", canvasObject.transform);
+            Anchor(crosshair, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(8f, 8f));
+            Image crossImage = crosshair.gameObject.AddComponent<Image>();
+            crossImage.sprite = rounded;
+            crossImage.type = Image.Type.Sliced;
+            crossImage.color = new Color(1f, 1f, 1f, 0.8f);
+            crossImage.raycastTarget = false;
+            Outline crossOutline = crosshair.gameObject.AddComponent<Outline>();
+            crossOutline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+            crossOutline.effectDistance = new Vector2(1f, -1f);
+
             OrderCardView cardPrefab = BuildOrderCardPrefab();
             RectTransform ordersContainer = BuildOrdersBar(safe);
             Text pointsText, cookiesText;

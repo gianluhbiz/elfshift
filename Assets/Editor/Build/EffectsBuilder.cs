@@ -76,6 +76,31 @@ namespace Elfshift.EditorTools
             return ps;
         }
 
+        /// <summary>Cielo stellato: punti luminosi fissi su una grande cupola attorno alla scena.</summary>
+        public static ParticleSystem CreateStars(Transform parent, string name, Material mat)
+        {
+            ParticleSystem ps = NewSystem(parent, name, Vector3.zero, mat);
+            ParticleSystem.MainModule main = ps.main;
+            main.loop = false;
+            main.playOnAwake = true;
+            main.duration = 1f;
+            main.startLifetime = 1000000f;
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.6f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 1f, 0.92f, 0.95f), new Color(0.75f, 0.85f, 1f, 0.7f));
+            main.maxParticles = 400;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+            ParticleSystem.EmissionModule emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)300) });
+
+            ParticleSystem.ShapeModule shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Hemisphere;
+            shape.radius = 110f;
+            return ps;
+        }
+
         /// <summary>Scoppio di scintille dorate (prodotto finito).</summary>
         public static ParticleSystem CreateSparkle(Transform parent, string name, Vector3 localPos, Material mat)
         {

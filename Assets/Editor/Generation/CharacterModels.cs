@@ -99,6 +99,29 @@ namespace Elfshift.EditorTools
             return hand;
         }
 
+        /// <summary>
+        /// Braccia e mani in vista davanti alla telecamera (prima persona) e punto in cui compare l'oggetto trasportato.
+        /// Restituisce il Transform "HandSocketFP".
+        /// </summary>
+        public static Transform BuildFirstPersonHands(Transform cameraTransform)
+        {
+            ModelKit.Begin("FirstPersonHands");
+            Transform root = ModelKit.Empty(cameraTransform, "FirstPersonHands", Vector3.zero);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                MeshBuilder mb = new MeshBuilder();
+                // manica verde che sale dal basso, polsino bianco e mano (guanto color pelle)
+                mb.Taper("GreenElf", new Vector3(0f, 0f, 0f), 0.075f, 0.095f, 0.5f, 0.04f, Vector3.zero, 14);
+                mb.Ring("White", new Vector3(0f, 0.5f, 0f), 0.082f, 0.024f, Vector3.zero, 14, 6);
+                mb.Ball("Skin", new Vector3(0f, 0.57f, 0f), 0.085f, new Vector3(1f, 1.1f, 0.9f), Vector3.zero, 12);
+                GameObject arm = ModelKit.Part(root, side < 0 ? "HandLeft" : "HandRight", mb,
+                    new Vector3(side * 0.34f, -0.42f, 0.16f), new Vector3(78f, side * 14f, side * -6f));
+                MeshRenderer r = arm.GetComponent<MeshRenderer>();
+                if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            return ModelKit.Empty(cameraTransform, "HandSocketFP", new Vector3(0.0f, -0.3f, 0.62f), new Vector3(0f, 0f, 0f));
+        }
+
         private static Transform BuildLeg(Transform root, string name, float x)
         {
             Transform leg = ModelKit.Empty(root, name, new Vector3(x, 0.55f, 0f));

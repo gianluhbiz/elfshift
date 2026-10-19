@@ -10,12 +10,19 @@ namespace Elfshift.Core
     ///
     /// Controlli:
     ///   Movimento ..... WASD / frecce / stick sinistro
+    ///   Sguardo ....... mouse / stick destro
     ///   Raccogli/posa . Spazio / pulsante A (Sud)
     ///   Interagisci ... E / pulsante X (Ovest) - da tenere premuto
     ///   Pausa ......... Esc / Start
     /// </summary>
     public sealed class InputReader : MonoBehaviour, IInputProvider
     {
+        [Header("Sguardo (prima persona)")]
+        [Min(0.01f)] [SerializeField] private float mouseDegreesPerPixel = 0.09f;
+        [Min(10f)] [SerializeField] private float stickDegreesPerSecond = 150f;
+
+        private InputAction lookMouseAction;
+        private InputAction lookStickAction;
         private InputAction moveAction;
         private InputAction pickupAction;
         private InputAction interactAction;
@@ -27,6 +34,16 @@ namespace Elfshift.Core
             {
                 Vector2 v = moveAction.ReadValue<Vector2>();
                 return Vector2.ClampMagnitude(v, 1f);
+            }
+        }
+
+        public Vector2 LookDelta
+        {
+            get
+            {
+                Vector2 mouse = lookMouseAction.ReadValue<Vector2>() * mouseDegreesPerPixel;
+                Vector2 stick = lookStickAction.ReadValue<Vector2>() * (stickDegreesPerSecond * Time.deltaTime);
+                return mouse + stick;
             }
         }
 
@@ -50,6 +67,9 @@ namespace Elfshift.Core
                 .With("Right", "<Keyboard>/rightArrow");
             moveAction.AddBinding("<Gamepad>/leftStick");
 
+            lookMouseAction = new InputAction("LookMouse", InputActionType.Value, "<Mouse>/delta", null, null, "Vector2");
+            lookStickAction = new InputAction("LookStick", InputActionType.Value, "<Gamepad>/rightStick", null, null, "Vector2");
+
             pickupAction = new InputAction("Pickup", InputActionType.Button);
             pickupAction.AddBinding("<Keyboard>/space");
             pickupAction.AddBinding("<Gamepad>/buttonSouth");
@@ -66,6 +86,8 @@ namespace Elfshift.Core
         private void OnEnable()
         {
             moveAction.Enable();
+            lookMouseAction.Enable();
+            lookStickAction.Enable();
             pickupAction.Enable();
             interactAction.Enable();
             pauseAction.Enable();
@@ -74,6 +96,8 @@ namespace Elfshift.Core
         private void OnDisable()
         {
             moveAction.Disable();
+            lookMouseAction.Disable();
+            lookStickAction.Disable();
             pickupAction.Disable();
             interactAction.Disable();
             pauseAction.Disable();
@@ -82,6 +106,8 @@ namespace Elfshift.Core
         private void OnDestroy()
         {
             moveAction?.Dispose();
+            lookMouseAction?.Dispose();
+            lookStickAction?.Dispose();
             pickupAction?.Dispose();
             interactAction?.Dispose();
             pauseAction?.Dispose();

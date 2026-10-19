@@ -1,0 +1,16 @@
+{
+    "name": "Elfshift.Editor.Bootstrap",
+    "rootNamespace": "Elfshift.EditorBootstrap",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

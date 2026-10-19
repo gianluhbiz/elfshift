@@ -1,9 +1,9 @@
 # Il Laboratorio di Babbo Natale — Fase 1: prototipo 3D giocabile
 
-Gioco natalizio 3D per PC (Windows), sviluppato con **Unity 6** e C#.
+Gioco natalizio 3D in **prima persona** per PC (Windows), sviluppato con **Unity 6** e C#.
 Tu gestisci il laboratorio degli elfi al Polo Nord: arrivano le letterine dei bambini, costruisci i giocattoli e li porti alla slitta prima che scada il tempo.
 
-> **Stato:** Fase 1 di 6. Il ciclo base è giocabile: *prendi il legno → posalo sul banco → costruisci il trenino → consegnalo alla slitta → ricevi punti e biscotti*.
+> **Stato:** Fase 1 di 6. Il ciclo base è giocabile (visuale in prima persona): *prendi il legno → posalo sul banco → costruisci il trenino → consegnalo alla slitta → ricevi punti e biscotti*.
 
 ---
 
@@ -46,19 +46,22 @@ Puoi rilanciare il punto 2 quando vuoi: ricostruisce tutto da zero (le cartelle 
 
 ## 5. Giocare
 
-Premi il pulsante **Play ▶** (in alto al centro).
+Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene bloccato al centro della finestra di gioco: **Esc** lo libera (per uscire dalla finestra), un clic lo blocca di nuovo.
 
 | Tasto | Azione |
 |---|---|
+| **Mouse** (o stick destro) | Guardarsi intorno |
 | **W A S D** o **frecce** (o stick sinistro) | Muoversi |
 | **Spazio** (o pulsante A) | Prendere un oggetto / posarlo / consegnarlo |
 | **E** (o pulsante X) — *tenuto premuto* | Costruire sul banco |
 
-**Cosa devi vedere:** un laboratorio di legno con tappeto rosso, tre banchi, tre scaffali alla sinistra, un albero di Natale, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Dopo 2 secondi compare in alto una **letterina** con il trenino richiesto e il tempo.
+**Cosa devi vedere:** dagli occhi dell'elfo, un laboratorio di legno con soffitto a travi, tappeto rosso, tre banchi di fronte a te, tre scaffali alla tua sinistra, un albero di Natale, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro. Dopo 2 secondi compare in alto una **letterina** con il trenino richiesto e il tempo.
+
+**Importante:** si interagisce con ciò che *guardi*. Per usare uno scaffale, un banco o la slitta devi essere vicino **e** rivolto verso di loro.
 
 **Il ciclo da provare:**
-1. Avvicinati allo **scaffale in alto a sinistra** (insegna con il tronchetto) → in basso compare `[SPAZIO] Prendi Legno` → premi **Spazio**: il legno è in mano.
-2. Vai al **primo banco** (quello con martello e morsa) → `[SPAZIO] Metti sul banco` → **Spazio**.
+1. Avvicinati allo **scaffale del legno** (parete sinistra, il più lontano da te: ha un'insegna con un tronchetto) e guardalo → in basso compare `[SPAZIO] Prendi Legno` → premi **Spazio**: il legno è in mano.
+2. Vai al **banco di sinistra** (quello con martello e morsa, sulla parete di fronte) e guardalo → `[SPAZIO] Metti sul banco` → **Spazio**.
 3. Torna a prendere un **secondo legno** e posalo sul banco. Compare `[E] Tieni premuto: costruisci Trenino`.
 4. Tieni premuto **E** per 2,5 secondi: l'elfo martella, la barra si riempie, compaiono scintille e il trenino appare sul banco.
 5. Premi **Spazio** vicino al banco per prendere il trenino.
@@ -80,7 +83,7 @@ Assets/
   Scripts/                 Il codice del gioco (assembly "Elfshift.Runtime")
     Core/                  Dati (ScriptableObject), ricette, sessione di gioco, testi
     Input/                 Controlli centralizzati (InputReader): qui si cambiano i tasti
-    Player/                Elfo: movimento, interazione, mani, animazione, telecamera
+    Player/                Elfo: movimento, sguardo in prima persona, interazione, mani
     Interaction/           Sistema di interazione (basato sulla distanza)
     Production/            Oggetti nel mondo, scaffali, banchi di lavoro
     Orders/                Ordini, timer, slitta
@@ -108,7 +111,7 @@ Il numero di ordini contemporanei si cambia nell'oggetto `_Game` → componente 
 I modelli attuali sono **generati da codice** (nessun asset esterno, nessun problema di licenza): servono a provare il gioco con un aspetto gradevole. Per sostituirli non serve riscrivere il gameplay:
 
 - **Oggetti (legno, trenino…)**: seleziona l'asset `Item_*` in `Assets/Settings/Data` e trascina il tuo prefab nel campo **Visual Prefab**. L'origine del modello deve essere al centro della base. Vale ovunque: in mano, sul banco, nelle icone della letterina.
-- **Elfo**: il corpo è un figlio del prefab `Player` chiamato `ElfVisual`. Sostituiscilo con il tuo personaggio e aggiungi un componente che implementa `ICharacterVisual` (4 metodi: velocità, trasporto, lavoro, raccolta; per esempio imposta i parametri di un Animator). Il resto non cambia.
+- **Elfo**: in prima persona il corpo non si vede (proietta solo l'ombra); le braccia visibili sono `FirstPersonHands`, figlie della telecamera nel prefab `Player`. Il corpo è il figlio `ElfVisual`. Sostituiscili con il tuo personaggio e aggiungi un componente che implementa `ICharacterVisual` (4 metodi: velocità, trasporto, lavoro, raccolta; per esempio imposta i parametri di un Animator). Il resto non cambia.
 - **Mobili e slitta**: sono prefab in `Assets/Prefabs/Generated/Stations`. Duplicali e sostituisci i modelli mantenendo i punti di riferimento (`Input1`, `Input2`, `Output`, `InteractionPoint`…) e i collider.
 
 > Attenzione: le cartelle `Generated` vengono rigenerate quando rilanci la costruzione. Se vuoi tenere una tua versione, spostala fuori da `Generated`.
@@ -126,16 +129,16 @@ Strumenti gratuiti utili per i modelli definitivi: **Blender** (<https://www.ble
 | Tutto **rosa/magenta** | Il progetto non usa URP. Ricrea il progetto con il template **Universal 3D** e ricopia `Assets`. |
 | Errori rossi del tipo *"Assembly … references … not found"* | Manca un pacchetto: *Window → Package Manager → Unity Registry*, installa **Input System** e **Universal RP**. Poi *Assets → Reimport All*. |
 | Premendo i tasti non succede nulla | *Edit → Project Settings → Player → Other Settings → Active Input Handling* = **Input System Package (New)** (o **Both**), poi riavvia. |
-| Il menu **Elfshift** non compare | Ci sono errori di compilazione nella Console: risolvili (di solito è un pacchetto mancante, vedi sopra). |
+| Il menu **Elfshift** non compare | Controlla che esistano `Assets/Scripts` e `Assets/Editor` nel progetto. Apri *Window → General → Console*, premi *Clear* e aspetta la fine della compilazione: se restano messaggi **rossi**, copiane il testo e mandalo. Dopo l'aggiornamento il menu compare anche con errori, e la voce **Elfshift → Fase 1 → 0 - Aiuto** spiega cosa fare. |
 | Le icone delle letterine sono vuote | Il testo e il timer funzionano comunque. Segnalami il messaggio della Console. |
 | "*Errore durante la costruzione*" | Leggi il dettaglio nella Console e mandamelo: lo correggiamo senza ricominciare. |
 
 ## 10. Cosa c'è e cosa manca
 
-**Fase 1 (questa):** ambiente 3D, elfo con camminata/trasporto/lavoro, telecamera inclinata morbida, scaffale del legno, banco di costruzione con ricetta, slitta, ordine con timer, punti e biscotti, interfaccia, neve, luci, test della logica.
+**Fase 1 (questa):** ambiente 3D, elfo con camminata/trasporto/lavoro, telecamera in prima persona con mouse-look, scaffale del legno, banco di costruzione con ricetta, slitta, ordine con timer, punti e biscotti, interfaccia, neve, luci, test della logica.
 
 **Prossime fasi:** 2) tutte le postazioni (vernice, pacchi), più materiali/giocattoli, più ordini; 3) dieci giornate, stelle, salvataggio; 4) negozio e aiutante; 5) imprevisti, menu, pausa, opzioni, audio; 6) build Windows, itch.io, Steam.
 
-Nota sulla visuale: nella richiesta compariva sia "prima persona" sia "visuale dall'alto inclinata". Ho scelto la **vista dall'alto inclinata in terza persona** (con l'elfo visibile e animato), coerente con gli altri punti del documento. Se preferisci davvero la prima persona dimmelo prima di proseguire.
+Nota sulla visuale: la Fase 1 è in **prima persona** (telecamera all'altezza degli occhi, mouse per guardare). Il modello dell'elfo con le sue animazioni resta nel prefab e proietta l'ombra; tornerà visibile se in futuro vorremo una vista in terza persona.
 
 Tutti i modelli, le texture e le icone di questa fase sono **originali, generati da codice**; non contengono contenuti di terzi.

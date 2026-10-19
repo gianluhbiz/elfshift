@@ -4,22 +4,19 @@ using UnityEngine;
 namespace Elfshift.Player
 {
     /// <summary>
-    /// Movimento dell'elfo: accelerazione e decelerazione morbide, rotazione verso la direzione
-    /// di marcia, collisioni con i mobili tramite CharacterController (nessuna compenetrazione).
-    /// Il movimento è relativo alla telecamera, quindi funziona anche se la vista viene ruotata.
+    /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, relativi alla direzione
+    /// in cui guardi. Accelerazione e decelerazione morbide; collisioni con i mobili tramite
+    /// CharacterController (nessuna compenetrazione). La rotazione è gestita da <see cref="FirstPersonLook"/>.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerController : MonoBehaviour
     {
         [SerializeField] private InputReader input;
-        [Tooltip("Telecamera di riferimento per la direzione di movimento. Se vuota si usa il mondo.")]
-        [SerializeField] private Transform cameraTransform;
 
         [Header("Movimento")]
         [Min(0.5f)] [SerializeField] private float maxSpeed = 4.6f;
         [Min(1f)] [SerializeField] private float acceleration = 22f;
         [Min(1f)] [SerializeField] private float deceleration = 30f;
-        [Min(90f)] [SerializeField] private float turnSpeedDegrees = 900f;
         [SerializeField] private float gravity = -25f;
 
         private CharacterController controller;
@@ -40,7 +37,6 @@ namespace Elfshift.Player
             controller = GetComponent<CharacterController>();
             visual = GetComponentInChildren<ICharacterVisual>();
             if (input == null) Debug.LogError("[Elfshift] PlayerController: manca InputReader.", this);
-            if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
         }
 
         private void Update()
@@ -49,14 +45,9 @@ namespace Elfshift.Player
             float dt = Time.deltaTime;
 
             Vector2 raw = MovementLocked ? Vector2.zero : input.Move;
-            Vector3 forward = Vector3.forward;
-            Vector3 right = Vector3.right;
-            if (cameraTransform != null)
-            {
-                forward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
-                if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
-                right = Vector3.Cross(Vector3.up, forward);
-            }
+            Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
 
             float speedLimit = maxSpeed * Mathf.Max(0f, SpeedMultiplier);
             Vector3 desired = (right * raw.x + forward * raw.y) * speedLimit;
@@ -68,12 +59,6 @@ namespace Elfshift.Player
 
             Vector3 motion = planarVelocity + Vector3.up * verticalVelocity;
             controller.Move(motion * dt);
-
-            if (planarVelocity.sqrMagnitude > 0.04f)
-            {
-                Quaternion target = Quaternion.LookRotation(planarVelocity.normalized, Vector3.up);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeedDegrees * dt);
-            }
 
             if (visual != null)
                 visual.SetMoveAmount(maxSpeed > 0f ? Mathf.Clamp01(planarVelocity.magnitude / maxSpeed) : 0f);

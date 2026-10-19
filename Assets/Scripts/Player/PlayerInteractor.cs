@@ -21,6 +21,8 @@ namespace Elfshift.Player
         [SerializeField] private InputReader input;
         [SerializeField] private Carrier carrier;
         [SerializeField] private PlayerController movement;
+        [Tooltip("Gli occhi dell'elfo (la telecamera): si interagisce solo con ciò che si guarda. Se vuoto non c'è il controllo dello sguardo.")]
+        [SerializeField] private Transform eye;
         [Tooltip("Distanza davanti all'elfo a cui viene posato un oggetto a terra.")]
         [SerializeField] private float dropDistance = 0.95f;
         [SerializeField] private float floorHeight = 0f;
@@ -93,6 +95,7 @@ namespace Elfshift.Player
                 float sq = delta.sqrMagnitude;
                 float reach = candidate.Radius;
                 if (sq > reach * reach) continue;
+                if (!IsLookingAt(candidate, sq)) continue;
 
                 if (!hasItem)
                 {
@@ -170,6 +173,19 @@ namespace Elfshift.Player
 
             // ---- 4) Tasto E tenuto premuto: interazione a durata ---------------------------
             UpdateHold(bestHold);
+        }
+
+        /// <summary>
+        /// Prima persona: l'oggetto deve essere (più o meno) davanti allo sguardo, tranne quando si è
+        /// quasi addosso ad esso. Tolleranza ampia (circa 70 gradi) per non essere frustranti.
+        /// </summary>
+        private bool IsLookingAt(Interactable candidate, float horizontalSqDistance)
+        {
+            if (eye == null || horizontalSqDistance < 0.64f) return true;
+            Vector3 toTarget = candidate.FocusPoint - eye.position;
+            float distance = toTarget.magnitude;
+            if (distance < 0.01f) return true;
+            return Vector3.Dot(eye.forward, toTarget / distance) > 0.35f;
         }
 
         private void UpdateHold(IHoldInteractable candidate)

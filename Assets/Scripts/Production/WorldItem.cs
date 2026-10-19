@@ -60,6 +60,7 @@ namespace Elfshift.Production
             Placement = ItemPlacement.Floor;
             PickupPrompt = UiText.Take(definition.DisplayName);
             SetInteraction(FloorPickupRadius, transform);
+            SetFocusHeight(0.12f);
             BuildVisual(definition);
         }
 

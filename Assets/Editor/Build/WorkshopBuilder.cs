@@ -87,15 +87,11 @@ namespace Elfshift.EditorTools
                 Light sun = BuildLighting(environment.transform);
                 GameObject weather = BuildWeather();
 
-                Step("Elfo e telecamera...", 0.75f);
-                Camera cam = BuildCamera();
-                GameObject player = BuildPlayer(input, cam, out PlayerInteractor interactor, out Carrier carrier);
-                Wire.Ref(cam.GetComponent<TopDownCamera>(), "target", player.transform);
-                cam.GetComponent<TopDownCamera>().SnapToTarget();
+                Step("Elfo e telecamera in prima persona...", 0.75f);
+                GameObject player = BuildPlayer(input, out PlayerInteractor interactor, out Carrier carrier);
 
                 // Collegamenti tra la scena e gli oggetti di gioco
                 Wire.Ref(sleigh, "orders", orders);
-                Wire.Ref(player.GetComponent<PlayerController>(), "cameraTransform", cam.transform);
                 if (bench == null || sun == null || weather == null) Debug.LogWarning("[Elfshift] Elementi mancanti nella scena.");
 
                 Step("Interfaccia...", 0.88f);
@@ -199,6 +195,14 @@ namespace Elfshift.EditorTools
                 Place(window.transform, group, new Vector3(ShellModels.WindowCenters[i], ShellModels.WindowBottom, wallInnerZ + 0.12f), 180f);
             }
 
+            for (int i = 0; i < ShellModels.WindowCenters.Length; i++)
+            {
+                GameObject frontWindow = PropModels.BuildWindow(null, ShellModels.WindowWidth, ShellModels.WindowHeight);
+                frontWindow.name = "FrontWindow_" + (i + 1);
+                // sulla parete frontale la finestra guarda verso +Z (l'interno)
+                Place(frontWindow.transform, group, new Vector3(ShellModels.WindowCenters[i], ShellModels.WindowBottom, -wallInnerZ - 0.12f), 0f);
+            }
+
             GameObject board = PropModels.BuildCorkBoard(null);
             board.name = "OrderBoard";
             Place(board.transform, group, new Vector3(-2.0f, 2.35f, wallInnerZ - 0.08f), 180f);
@@ -214,6 +218,11 @@ namespace Elfshift.EditorTools
             {
                 float x0 = -8f + i * 4f;
                 PropModels.BuildLightString(lights, "BackWall_" + i, new Vector3(x0 + 0.1f, y, wallInnerZ - 0.12f), new Vector3(x0 + 3.9f, y, wallInnerZ - 0.12f), 0.4f, 9, BulbRenderers, BulbColors);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                float x0 = -8f + i * 4f;
+                PropModels.BuildLightString(lights, "FrontWall_" + i, new Vector3(x0 + 0.1f, y, -wallInnerZ + 0.12f), new Vector3(x0 + 3.9f, y, -wallInnerZ + 0.12f), 0.4f, 9, BulbRenderers, BulbColors);
             }
             for (int i = 0; i < 3; i++)
             {
@@ -362,9 +371,9 @@ namespace Elfshift.EditorTools
             float[] lampX = { ConstructionBenchPos.x, PaintBenchPos.x, WrapBenchPos.x };
             for (int i = 0; i < lampX.Length; i++)
             {
-                GameObject lamp = PropModels.BuildHangingLamp(null, 1.0f);
-                Place(lamp.transform, group, new Vector3(lampX[i], 4.0f, 2.6f), 0f);
-                AddPointLight(lamp.transform, "LampLight", new Vector3(0f, -1.0f - 0.28f, 0f), new Color(1f, 0.78f, 0.5f), 2.4f, 8f, false);
+                GameObject lamp = PropModels.BuildHangingLamp(null, 1.25f);
+                Place(lamp.transform, group, new Vector3(lampX[i], ShellModels.WallHeight, 2.6f), 0f);
+                AddPointLight(lamp.transform, "LampLight", new Vector3(0f, -1.25f - 0.28f, 0f), new Color(1f, 0.78f, 0.5f), 2.4f, 8f, false);
             }
 
             // pupazzo di neve e abeti sullo sfondo
@@ -438,33 +447,14 @@ namespace Elfshift.EditorTools
             // Neve fuori dalle finestre (dietro il muro di fondo), sulla banchina e a sinistra del laboratorio.
             EffectsBuilder.CreateSnow(weather.transform, "Snow_Back", new Vector3(4f, 11f, 13f), new Vector3(46f, 1f, 16f), 170f, particleMaterial);
             EffectsBuilder.CreateSnow(weather.transform, "Snow_Dock", new Vector3(14f, 11f, 0f), new Vector3(14f, 1f, 22f), 90f, particleMaterial);
+            EffectsBuilder.CreateStars(weather.transform, "Stars", particleMaterial);
             EffectsBuilder.CreateSnow(weather.transform, "Snow_Left", new Vector3(-15f, 11f, 0f), new Vector3(14f, 1f, 26f), 80f, particleMaterial);
+            EffectsBuilder.CreateSnow(weather.transform, "Snow_Front", new Vector3(4f, 11f, -13f), new Vector3(46f, 1f, 16f), 170f, particleMaterial);
             return weather;
         }
 
-        // ============================================================================ telecamera e giocatore
-        private static Camera BuildCamera()
-        {
-            GameObject camObject = new GameObject("Main Camera");
-            camObject.tag = "MainCamera";
-            Camera cam = camObject.AddComponent<Camera>();
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.07f, 0.1f, 0.22f);
-            cam.fieldOfView = 36f;
-            cam.nearClipPlane = 0.3f;
-            cam.farClipPlane = 220f;
-            camObject.AddComponent<AudioListener>();
-
-            UniversalAdditionalCameraData extra = cam.GetUniversalAdditionalCameraData();
-            extra.renderPostProcessing = true;
-            extra.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-            extra.antialiasingQuality = AntialiasingQuality.Medium;
-
-            camObject.AddComponent<TopDownCamera>();
-            return cam;
-        }
-
-        private static GameObject BuildPlayer(InputReader input, Camera cam, out PlayerInteractor interactor, out Carrier carrier)
+        // ============================================================================ giocatore in prima persona
+        private static GameObject BuildPlayer(InputReader input, out PlayerInteractor interactor, out Carrier carrier)
         {
             GameObject player = new GameObject("Player");
             CharacterController controller = player.AddComponent<CharacterController>();
@@ -475,22 +465,50 @@ namespace Elfshift.EditorTools
             controller.skinWidth = 0.04f;
             controller.slopeLimit = 45f;
 
+            // Corpo dell'elfo: in prima persona non si vede, ma proietta la sua ombra sul pavimento.
             GameObject visual;
-            Transform hand = CharacterModels.BuildElf(player.transform, out visual);
+            CharacterModels.BuildElf(player.transform, out visual);
+            Renderer[] bodyRenderers = visual.GetComponentsInChildren<Renderer>();
+            for (int i = 0; i < bodyRenderers.Length; i++)
+                bodyRenderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+
+            // Telecamera all'altezza degli occhi
+            GameObject camObject = new GameObject("Main Camera");
+            camObject.tag = "MainCamera";
+            camObject.transform.SetParent(player.transform, false);
+            camObject.transform.localPosition = new Vector3(0f, 1.62f, 0.05f);
+            Camera cam = camObject.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.04f, 0.06f, 0.14f);
+            cam.fieldOfView = 68f;
+            cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 220f;
+            camObject.AddComponent<AudioListener>();
+
+            UniversalAdditionalCameraData extra = cam.GetUniversalAdditionalCameraData();
+            extra.renderPostProcessing = true;
+            extra.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            extra.antialiasingQuality = AntialiasingQuality.Medium;
+
+            FirstPersonLook look = camObject.AddComponent<FirstPersonLook>();
+            Wire.Ref(look, "body", player.transform);
+
+            Transform handSocket = CharacterModels.BuildFirstPersonHands(camObject.transform);
 
             carrier = player.AddComponent<Carrier>();
-            Wire.Ref(carrier, "handSocket", hand);
+            Wire.Ref(carrier, "handSocket", handSocket);
             PlayerController movement = player.AddComponent<PlayerController>();
             interactor = player.AddComponent<PlayerInteractor>();
             Wire.Ref(interactor, "carrier", carrier);
             Wire.Ref(interactor, "movement", movement);
+            Wire.Ref(interactor, "eye", camObject.transform);
 
             SaveAsConnectedPrefab(player, AssetUtil.GeneratedPrefabs + "/Player.prefab");
 
             // Questi collegamenti puntano a oggetti di scena: si fanno dopo aver creato il prefab.
             Wire.Ref(movement, "input", input);
             Wire.Ref(interactor, "input", input);
-            Wire.Ref(movement, "cameraTransform", cam.transform);
+            Wire.Ref(look, "input", input);
             player.transform.position = PlayerStart;
             player.transform.rotation = Quaternion.identity;
             return player;
