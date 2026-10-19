@@ -34,6 +34,26 @@ Il progetto funziona anche con Unity 6.0 LTS, ma 6.3 LTS è la versione consigli
    - Se compare una finestra su "*Input System… enable new input backends*", premi **Yes** e lascia riavviare Unity.
 5. Apri la scheda **Console** (menu *Window → General → Console*): non devono esserci messaggi **rossi**. Se ci sono, vedi la sezione *Problemi comuni*.
 
+### Aggiornare più velocemente (consigliato): collegare il progetto a Git
+
+Invece di riscaricare lo ZIP ogni volta, collega **una volta sola** la cartella del progetto al repository.
+
+1. Installa **Git** da <https://git-scm.com/download/win> (tutte le opzioni predefinite vanno bene). Se il repository è privato, al primo uso ti chiederà di accedere a GitHub.
+2. Chiudi Unity. Apri la cartella del progetto, clicca nella barra dell'indirizzo, scrivi `cmd` e premi Invio. Nella finestra nera incolla, una riga alla volta:
+
+```
+git init
+git remote add origin https://github.com/gianluhbiz/elfshift.git
+git fetch origin claude/friendly-planck-b1zodj
+git checkout -f -B claude/friendly-planck-b1zodj origin/claude/friendly-planck-b1zodj
+```
+
+3. Riapri il progetto in Unity.
+
+**Da quel momento, per aggiornare** basta fare doppio clic su `Aggiorna-Progetto.bat` (si trova nella cartella del progetto) oppure scrivere `git fetch origin` e poi `git checkout -f -B claude/friendly-planck-b1zodj origin/claude/friendly-planck-b1zodj`. Poi torna in Unity, aspetta la compilazione e rilancia *Elfshift → Fase 1 → 2 - Costruisci il laboratorio*.
+
+> Attenzione: l'aggiornamento sovrascrive i file del gioco (cartelle `Scripts`, `Editor`, `Tests`). I tuoi file e quelli creati da Unity (`Library`, scene tue…) non vengono toccati. Se modifichi uno script nostro, fanne prima una copia.
+
 ## 4. Costruire il laboratorio (automatico)
 
 Nella barra dei menu in alto è comparso un menu **Elfshift**.
