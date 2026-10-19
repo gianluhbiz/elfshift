@@ -77,7 +77,7 @@ namespace Elfshift.EditorBootstrap
             EditorUtility.DisplayDialog(
                 "Elfshift - laboratorio pronto!",
                 "La scena \"Workshop\" è stata creata e aperta.\n\nPremi il pulsante Play (▶) in alto al centro per giocare.\n\n" +
-                "Controlli: WASD/frecce = muoviti, Spazio = prendi/posa, E (tenuto premuto) = costruisci.",
+                "Controlli: WASD/frecce = muoviti, Spazio = salta, clic sinistro = prendi/posa, E (tenuto premuto) = costruisci.",
                 "Ho capito");
         }
 

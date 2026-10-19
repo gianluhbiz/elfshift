@@ -418,6 +418,27 @@ namespace Elfshift.EditorTools
             return root.gameObject;
         }
 
+        /// <summary>Freccia dorata luminosa che indica il prossimo bersaglio (punta verso il basso).</summary>
+        public static GameObject BuildObjectiveArrow(Transform parent)
+        {
+            ModelKit.Begin("ObjectiveArrow");
+            Transform root = ModelKit.Empty(parent, "ObjectiveMarker", Vector3.zero);
+            Transform arrow = ModelKit.Empty(root, "Arrow", Vector3.zero);
+            MeshBuilder mb = new MeshBuilder();
+            mb.Cone("StarGlow", new Vector3(0f, 0.75f, 0f), 0.3f, 0.75f, new Vector3(180f, 0f, 0f), 4);
+            mb.Cyl("StarGlow", new Vector3(0f, 0.72f, 0f), 0.09f, 0.45f, 0.02f, Vector3.zero, 8);
+            mb.Ring("Gold", new Vector3(0f, 0.2f, 0f), 0.34f, 0.025f, Vector3.zero, 20, 6);
+            GameObject part = ModelKit.Part(arrow, "Mesh", mb);
+            MeshRenderer r = part.GetComponent<MeshRenderer>();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            Elfshift.Vfx.Bobbing bob = arrow.gameObject.AddComponent<Elfshift.Vfx.Bobbing>();
+            Wire.Float(bob, "height", 0.18f);
+            Wire.Float(bob, "speed", 2.4f);
+            Wire.Float(bob, "spinDegreesPerSecond", 70f);
+            return root.gameObject;
+        }
+
         /// <summary>Mucchio di neve (ellissoide schiacciato).</summary>
         public static GameObject BuildSnowDrift(Transform parent, Vector3 radii)
         {

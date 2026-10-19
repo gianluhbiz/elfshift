@@ -52,29 +52,33 @@ Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene b
 |---|---|
 | **Mouse** (o stick destro) | Guardarsi intorno |
 | **W A S D** o **frecce** (o stick sinistro) | Muoversi |
-| **Spazio** (o pulsante A) | Prendere un oggetto / posarlo / consegnarlo |
-| **E** (o pulsante X) — *tenuto premuto* | Costruire sul banco |
+| **Spazio** (o pulsante A) | **Saltare** |
+| **Tasto sinistro del mouse** (o grilletto destro) | **Prendere / posare / consegnare** |
+| **E** o **tasto destro del mouse** (tenuto premuto) — o pulsante X | Costruire sul banco |
+| **Esc** | Libera il cursore dalla finestra di gioco |
 
-**Cosa devi vedere:** dagli occhi dell'elfo, un laboratorio di legno con soffitto a travi, tappeto rosso, tre banchi di fronte a te, tre scaffali alla tua sinistra, un albero di Natale, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro. Dopo 2 secondi compare in alto una **letterina** con il trenino richiesto e il tempo.
+**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
 
 **Importante:** si interagisce con ciò che *guardi*. Per usare uno scaffale, un banco o la slitta devi essere vicino **e** rivolto verso di loro.
 
 **Il ciclo da provare:**
-1. Avvicinati allo **scaffale del legno** (parete sinistra, il più lontano da te: ha un'insegna con un tronchetto) e guardalo → in basso compare `[SPAZIO] Prendi Legno` → premi **Spazio**: il legno è in mano.
-2. Vai al **banco di sinistra** (quello con martello e morsa, sulla parete di fronte) e guardalo → `[SPAZIO] Metti sul banco` → **Spazio**.
-3. Torna a prendere un **secondo legno** e posalo sul banco. Compare `[E] Tieni premuto: costruisci Trenino`.
+1. Segui la **freccia dorata** fino allo **scaffale del legno** (parete sinistra, insegna con un tronchetto) e guardalo. Se sei ancora lontano compare *«Avvicinati: Scaffale del legno»*. Quando sei vicino compare `[CLIC SX] Prendi Legno` → premi il **tasto sinistro del mouse**: il legno è in mano.
+2. Vai al **primo banco** (quello più a sinistra, con martello e morsa) (quello con martello e morsa, sulla parete di fronte) e guardalo → `[CLIC SX] Metti sul banco` → **clic sinistro**.
+3. Torna a prendere un **secondo legno** e posalo sul banco. Compare `[E] Tieni premuto: costruisci Trenino` (puoi usare anche il tasto destro del mouse).
 4. Tieni premuto **E** per 2,5 secondi: l'elfo martella, la barra si riempie, compaiono scintille e il trenino appare sul banco.
-5. Premi **Spazio** vicino al banco per prendere il trenino.
-6. Portalo alla **slitta** (esci dalla porta a destra) → `[SPAZIO] Consegna alla slitta` → **Spazio**.
+5. **Clic sinistro** sul banco per prendere il trenino.
+6. Portalo alla **slitta** (esci dalla porta a destra) → `[CLIC SX] Consegna alla slitta` → **clic sinistro**.
 7. Vedi coriandoli, il messaggio *«Trenino consegnato! +… punti +5 biscotti»* e punti/biscotti salgono in alto a sinistra. Poco dopo arriva un nuovo ordine.
 
 **Come verificare che le regole siano corrette:**
-- Lontano da scaffali e banchi, **Spazio non fa nulla di utile**: le azioni dipendono dalla posizione.
+- Lontano da scaffali e banchi il clic non fa nulla di utile e compare un messaggio: le azioni dipendono dalla posizione.
 - Alla slitta con il *legno* in mano: *«Nessun ordine aperto per questo oggetto»*.
 - Con il banco pieno o con un oggetto inutile: il banco lo rifiuta con un messaggio.
-- Spazio lontano da tutto con un oggetto in mano → lo posa a terra davanti a te; riavvicinati e Spazio per riprenderlo.
+- Clic lontano da tutto con un oggetto in mano → lo posa a terra davanti a te; riavvicinati e clic per riprenderlo.
+- **Spazio** ti fa saltare (puoi anche saltare con l'oggetto in mano).
 - Se lasci scadere la letterina: *«Ordine scaduto!»* e perdi 20 punti.
 - Mentre tieni premuto E ti allontani o rilasci il tasto: la costruzione si annulla.
+- Premere E senza avere 2 legni sul banco mostra *«Niente da costruire…»*.
 
 ## 6. Struttura del progetto
 

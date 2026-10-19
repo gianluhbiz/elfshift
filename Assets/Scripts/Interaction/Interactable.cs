@@ -14,12 +14,15 @@ namespace Elfshift.Interaction
         [Min(0.2f)]
         [Tooltip("Distanza massima (in metri, sul piano) a cui il giocatore può interagire.")]
         [SerializeField] private float radius = 1.7f;
+        [Tooltip("Nome mostrato come suggerimento quando lo guardi da lontano (es. \"Scaffale del legno\"). Vuoto = nessun suggerimento.")]
+        [SerializeField] private string displayName = "";
         [Min(0f)]
         [Tooltip("Altezza (dal piano di appoggio) del punto che il giocatore deve guardare per interagire.")]
         [SerializeField] private float focusHeight = 0.8f;
 
         public Vector3 Position => interactionPoint != null ? interactionPoint.position : transform.position;
         public float Radius => radius;
+        public string DisplayName => displayName;
 
         /// <summary>Punto da guardare (in prima persona si interagisce con ciò che si ha davanti).</summary>
         public Vector3 FocusPoint => transform.position + Vector3.up * focusHeight;

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Elfshift.Player
 {
     /// <summary>
-    /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, relativi alla direzione
+    /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, Spazio salto, relativi alla direzione
     /// in cui guardi. Accelerazione e decelerazione morbide; collisioni con i mobili tramite
     /// CharacterController (nessuna compenetrazione). La rotazione è gestita da <see cref="FirstPersonLook"/>.
     /// </summary>
@@ -18,6 +18,7 @@ namespace Elfshift.Player
         [Min(1f)] [SerializeField] private float acceleration = 22f;
         [Min(1f)] [SerializeField] private float deceleration = 30f;
         [SerializeField] private float gravity = -25f;
+        [Min(0.2f)] [Tooltip("Altezza del salto in metri.")] [SerializeField] private float jumpHeight = 1.0f;
 
         private CharacterController controller;
         private ICharacterVisual visual;
@@ -54,7 +55,9 @@ namespace Elfshift.Player
             float rate = desired.sqrMagnitude > 0.001f ? acceleration : deceleration;
             planarVelocity = Vector3.MoveTowards(planarVelocity, desired, rate * dt);
 
-            if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
+            bool grounded = controller.isGrounded;
+            if (grounded && verticalVelocity < 0f) verticalVelocity = -2f;
+            if (grounded && input.JumpPressed) verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
             verticalVelocity += gravity * dt;
 
             Vector3 motion = planarVelocity + Vector3.up * verticalVelocity;

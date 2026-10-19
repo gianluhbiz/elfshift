@@ -35,6 +35,12 @@ namespace Elfshift.Production
         private string pickupPrompt = string.Empty;
         private bool working;
 
+        /// <summary>Quanti ingredienti ci sono sul banco.</summary>
+        public int InputCount => inputItems.Count;
+
+        /// <summary>Vero se sul banco c'è un prodotto finito da prendere.</summary>
+        public bool HasOutput => outputItem != null;
+
         /// <summary>Moltiplicatore di velocità (1 = normale). I miglioramenti del negozio lo modificheranno.</summary>
         public float SpeedMultiplier { get; set; } = 1f;
 

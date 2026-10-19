@@ -63,10 +63,10 @@ namespace Elfshift.EditorTools
             { "WoodEnd",    M("#F0CF98") },
             { "Bark",       M("#8A5B35") },
             // Metalli e pietra
-            { "Gold",       M("#F3B83C", 0.7f, 0.65f) },
-            { "MetalLight", M("#B4C0CC", 0.6f, 0.75f) },
-            { "MetalDark",  M("#5E6B7A", 0.5f, 0.75f) },
-            { "Iron",       M("#363C46", 0.45f, 0.6f) },
+            { "Gold",       M("#F3B83C", 0.65f, 0.35f) },
+            { "MetalLight", M("#B4C0CC", 0.55f, 0.4f) },
+            { "MetalDark",  M("#5E6B7A", 0.5f, 0.35f) },
+            { "Iron",       M("#363C46", 0.45f, 0.3f) },
             { "Stone",      M("#9096A3") },
             { "Brick",      M("#B9573C") },
             { "Cork",       M("#C99458") },
@@ -91,6 +91,8 @@ namespace Elfshift.EditorTools
             { "BulbRed",    M("#FF5A5A", 0.6f, 0f, 1.6f) },
             { "BulbGreen",  M("#6DFF9A", 0.6f, 0f, 1.6f) },
             { "BulbBlue",   M("#6FA8FF", 0.6f, 0f, 1.6f) },
+            { "FireOrange", M("#FF7A1F", 0.4f, 0f, 2.4f) },
+            { "FireYellow", M("#FFD24A", 0.4f, 0f, 2.8f) },
             { "StarGlow",   M("#FFD45C", 0.6f, 0.3f, 1.8f) },
             { "LampGlow",   M("#FFE2A6", 0.5f, 0f, 2.0f) },
             // Terreno e decori

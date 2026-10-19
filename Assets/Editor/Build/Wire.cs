@@ -55,6 +55,15 @@ namespace Elfshift.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        public static void Str(Object target, string field, string value)
+        {
+            SerializedObject so;
+            SerializedProperty p = Find(target, field, out so);
+            if (p == null) return;
+            p.stringValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         public static void Enum(Object target, string field, int enumIndex)
         {
             SerializedObject so;

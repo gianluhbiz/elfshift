@@ -34,9 +34,16 @@ namespace Elfshift.Player
         private string lastPickupPrompt;
         private string lastInteractPrompt;
         private float lastProgress = -1f;
+        private bool wasInteractHeld;
+        private Interactable farCandidate;
+        private Interactable lastFarCandidate;
+        private string lastFarText;
+        private string lastHint;
 
         /// <summary>(testo tasto Spazio, testo tasto E). Stringa vuota/null = nessuna azione.</summary>
         public event Action<string, string> PromptChanged;
+        /// <summary>Suggerimento quando guardi un oggetto utile ma sei troppo lontano (es. "Avvicinati: Scaffale del legno"). Null = nessuno.</summary>
+        public event Action<string> HintChanged;
         /// <summary>Avanzamento dell'interazione a durata, 0..1; -1 = nascosta.</summary>
         public event Action<float> HoldProgressChanged;
         /// <summary>Messaggio breve per il giocatore (es. "Questo non serve qui").</summary>
@@ -83,6 +90,8 @@ namespace Elfshift.Player
             string rejectReason = null;
             IHoldInteractable bestHold = null;
             float bestHoldSq = float.MaxValue;
+            Interactable farBest = null;
+            float farBestSq = float.MaxValue;
 
             var all = InteractableRegistry.All;
             for (int i = 0; i < all.Count; i++)
@@ -94,7 +103,21 @@ namespace Elfshift.Player
                 delta.y = 0f;
                 float sq = delta.sqrMagnitude;
                 float reach = candidate.Radius;
-                if (sq > reach * reach) continue;
+                if (sq > reach * reach)
+                {
+                    // Troppo lontano per usarlo, ma se lo stai guardando ti suggeriamo di avvicinarti.
+                    if (eye != null && sq < 100f && sq < farBestSq && !string.IsNullOrEmpty(candidate.DisplayName))
+                    {
+                        Vector3 toFar = candidate.FocusPoint - eye.position;
+                        float farDistance = toFar.magnitude;
+                        if (farDistance > 0.01f && Vector3.Dot(eye.forward, toFar / farDistance) > 0.85f)
+                        {
+                            farBest = candidate;
+                            farBestSq = sq;
+                        }
+                    }
+                    continue;
+                }
                 if (!IsLookingAt(candidate, sq)) continue;
 
                 if (!hasItem)
@@ -139,6 +162,13 @@ namespace Elfshift.Player
             else pickupPrompt = acceptor != null ? acceptor.PlacePrompt : UiText.Drop;
             string interactPrompt = bestHold != null ? bestHold.HoldPrompt : null;
             PublishPrompts(pickupPrompt, interactPrompt);
+            farCandidate = (pickupPrompt == null && interactPrompt == null) ? farBest : null;
+            PublishHint(farCandidate);
+
+            bool interactHeld = input.InteractHeld;
+            bool interactJustPressed = interactHeld && !wasInteractHeld;
+            wasInteractHeld = interactHeld;
+            if (interactJustPressed && bestHold == null && activeHold == null) MessageRaised?.Invoke(UiText.NothingToBuild);
 
             // ---- 3) Tasto Spazio: prendi / posa --------------------------------------------
             if (input.PickupPressed && activeHold == null)
@@ -153,6 +183,10 @@ namespace Elfshift.Player
                             carrier.Hold(taken);
                             if (visual != null) visual.PlayPickup();
                         }
+                    }
+                    else
+                    {
+                        MessageRaised?.Invoke(UiText.NothingToTake);
                     }
                 }
                 else if (acceptor != null)
@@ -177,7 +211,7 @@ namespace Elfshift.Player
 
         /// <summary>
         /// Prima persona: l'oggetto deve essere (più o meno) davanti allo sguardo, tranne quando si è
-        /// quasi addosso ad esso. Tolleranza ampia (circa 70 gradi) per non essere frustranti.
+        /// quasi addosso ad esso. Tolleranza ampia (circa 78 gradi) per non essere frustranti.
         /// </summary>
         private bool IsLookingAt(Interactable candidate, float horizontalSqDistance)
         {
@@ -185,7 +219,7 @@ namespace Elfshift.Player
             Vector3 toTarget = candidate.FocusPoint - eye.position;
             float distance = toTarget.magnitude;
             if (distance < 0.01f) return true;
-            return Vector3.Dot(eye.forward, toTarget / distance) > 0.35f;
+            return Vector3.Dot(eye.forward, toTarget / distance) > 0.2f;
         }
 
         private void UpdateHold(IHoldInteractable candidate)
@@ -260,6 +294,27 @@ namespace Elfshift.Player
             lastPickupPrompt = pickup;
             lastInteractPrompt = interact;
             PromptChanged?.Invoke(pickup, interact);
+        }
+
+        private void PublishHint(Interactable target)
+        {
+            string text = null;
+            if (target != null)
+            {
+                if (!ReferenceEquals(target, lastFarCandidate))
+                {
+                    lastFarCandidate = target;
+                    lastFarText = UiText.GetCloser(target.DisplayName);
+                }
+                text = lastFarText;
+            }
+            else
+            {
+                lastFarCandidate = null;
+            }
+            if (string.Equals(text, lastHint)) return;
+            lastHint = text;
+            HintChanged?.Invoke(text);
         }
 
         private void PublishProgress(float value)

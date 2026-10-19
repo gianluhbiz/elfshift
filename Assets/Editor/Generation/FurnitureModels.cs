@@ -43,7 +43,7 @@ namespace Elfshift.EditorTools
 
             // insegna sopra lo scaffale con un simbolo
             MeshBuilder sign = new MeshBuilder();
-            string signMat = kind == "Wood" ? "WoodEnd" : (kind == "Cloth" ? "ClothPink" : "MetalLight");
+            string signMat = kind == "Wood" ? "WoodEnd" : (kind == "Cloth" ? "ClothPink" : (kind == "Toys" ? "ClothYellow" : "MetalLight"));
             sign.Box("WoodDeep", new Vector3(0f, h + 0.3f, d / 2f - 0.1f), new Vector3(1.0f, 0.36f, 0.06f), 0.02f);
             sign.Cyl(signMat, new Vector3(0f, h + 0.3f, d / 2f - 0.07f), 0.12f, 0.03f, 0.008f, new Vector3(90f, 0f, 0f), 18);
             sign.Box("WoodDeep", new Vector3(-0.38f, h + 0.1f, d / 2f - 0.1f), new Vector3(0.05f, 0.22f, 0.05f), 0.01f);
@@ -115,6 +115,22 @@ namespace Elfshift.EditorTools
                     mb.Cyl(ToyColors[(i + 2) % ToyColors.Length], new Vector3(x, b2 + 0.02f, 0f), 0.075f, 0.2f, 0.012f, Vector3.zero, 14);
                     mb.Cyl("Cream", new Vector3(x, b2 + 0.215f, 0f), 0.1f, 0.025f, 0.008f, Vector3.zero, 14);
                 }
+            }
+            else if (kind == "Toys")
+            {
+                // vetrina dei giocattoli finiti (scenografia): orsetti, robot, tamburi, trottole, cubi, palloni
+                string[] furs = { "CookieBrown", "WoodLight", "ClothPink", "Cream", "ClothPurple" };
+                for (int i = 0; i < 5; i++)
+                    DecorModels.AddTeddy(mb, new Vector3(-0.95f + i * 0.47f, b0, 0.0f), 1.0f, furs[i], (i - 2) * 9f);
+                string[] bodies = { "ClothBlue", "ClothTeal", "ClothOrange", "ClothPurple" };
+                for (int i = 0; i < 4; i++)
+                    DecorModels.AddRobot(mb, new Vector3(-0.9f + i * 0.55f, b1, 0.02f), 1.0f, bodies[i], (i - 1.5f) * 10f);
+                DecorModels.AddDrum(mb, new Vector3(1.0f, b1, 0.1f), 1.0f);
+                DecorModels.AddBlocks(mb, new Vector3(-0.85f, b2, 0.05f), 1.3f);
+                DecorModels.AddSpinTop(mb, new Vector3(-0.35f, b2, 0.05f), 1.4f, "ClothYellow");
+                DecorModels.AddSpinTop(mb, new Vector3(0.0f, b2, 0.05f), 1.4f, "RedSanta");
+                DecorModels.AddBeachBall(mb, new Vector3(0.5f, b2, 0.05f), 0.16f);
+                DecorModels.AddDrum(mb, new Vector3(0.95f, b2, 0.0f), 0.8f);
             }
             else
             {

@@ -66,6 +66,44 @@ namespace Elfshift.EditorTools
             return tex;
         }
 
+        /// <summary>Carta da parati a righe verticali color crema con sottile filo dorato e piccoli rombi.</summary>
+        public static Texture2D WallStripes(int size = 512)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            Color[] px = new Color[size * size];
+            Color a = Palette.Hex("#F3E6C9");
+            Color b = Palette.Hex("#EBD7B0");
+            Color gold = Palette.Hex("#D9A441");
+            Color red = Palette.Hex("#C8505A");
+            int stripes = 8;
+            int w = size / stripes;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    int sx = x % w;
+                    Color c = ((x / w) % 2 == 0) ? a : b;
+                    // leggera texture della carta
+                    float n = (Mathf.PerlinNoise(x * 0.08f, y * 0.08f) - 0.5f) * 0.05f;
+                    c = new Color(c.r + n, c.g + n, c.b + n, 1f);
+                    // filo dorato ai bordi delle righe
+                    if (sx < 3) c = Color.Lerp(c, gold, 0.7f);
+                    // rombo rosso al centro della riga chiara, ripetuto ogni 64 pixel
+                    if ((x / w) % 2 == 0)
+                    {
+                        float dx = Mathf.Abs(sx - w * 0.5f);
+                        float dy = Mathf.Abs((y % 64) - 32f);
+                        if (dx + dy < 7f) c = Color.Lerp(c, red, 0.85f);
+                    }
+                    px[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(px);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.Apply();
+            return tex;
+        }
+
         /// <summary>Pallino bianco con bordo sfumato (per neve e scintille).</summary>
         public static Texture2D SoftCircle(int size = 64)
         {

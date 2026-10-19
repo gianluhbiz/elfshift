@@ -16,11 +16,23 @@ namespace Elfshift.Core
         public const string TakeFinishedFirst = "Prima prendi il giocattolo finito";
         public const string NoOrderForThis = "Nessun ordine aperto per questo oggetto";
         public const string OrderExpired = "Ordine scaduto!";
-        public const string Intro = "Prendi 2 legni, posali sul banco e tieni premuto E!";
+        public const string Intro = "Segui l'obiettivo in alto: clic sinistro = prendi/posa, E = costruisci, Spazio = salta";
+        public const string NothingToTake = "Niente da prendere qui: avvicinati a uno scaffale e guardalo";
+        public const string NothingToBuild = "Niente da costruire: posa 2 legni sul banco e guardalo";
 
-        public const string KeyPickup = "SPAZIO";
+        // Obiettivi del tutorial (mostrati in alto durante il primo ordine)
+        public const string GoalTakeWood = "Obiettivo: vai allo scaffale del legno e prendi un legno (clic sinistro)";
+        public const string GoalPlaceWood = "Obiettivo: porta il legno al banco di costruzione e posalo (clic sinistro)";
+        public const string GoalSecondWood = "Obiettivo: ti serve un altro legno: torna allo scaffale";
+        public const string GoalBuild = "Obiettivo: guarda il banco e tieni premuto E (o tasto destro) per costruire";
+        public const string GoalTakeToy = "Obiettivo: prendi il trenino dal banco (clic sinistro)";
+        public const string GoalDeliver = "Obiettivo: porta il trenino alla slitta, fuori dalla porta a destra";
+        public const string GoalWaitOrder = "Aspetta la prossima letterina...";
+
+        public const string KeyPickup = "CLIC SX";
         public const string KeyInteract = "E";
 
+        public static string GetCloser(string name) { return "Avvicinati: " + name; }
         public static string Take(string itemName) { return "Prendi " + itemName; }
         public static string HoldToBuild(string itemName) { return "Tieni premuto: costruisci " + itemName; }
         public static string ForChild(string childName) { return "Per " + childName; }

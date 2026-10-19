@@ -15,6 +15,10 @@ namespace Elfshift.EditorTools
         public OrderManager Orders;
         public PlayerInteractor Interactor;
         public Carrier Carrier;
+        public Elfshift.Production.CraftingStation Bench;
+        public Transform ShelfAnchor;
+        public Transform SleighAnchor;
+        public Transform MarkerObject;
         public ItemIconService Icons;
     }
 
@@ -73,6 +77,7 @@ namespace Elfshift.EditorTools
             ToastView toast = BuildToast(safe);
             InteractionPromptView prompts = BuildPrompts(safe, src);
             CarriedItemView carried = BuildCarried(safe, src);
+            BuildTutorial(safe, src);
 
             // Collegamenti
             OrderBarView bar = ordersContainer.gameObject.AddComponent<OrderBarView>();
@@ -247,6 +252,32 @@ namespace Elfshift.EditorTools
             return view;
         }
 
+        // ================================================================== obiettivo del tutorial
+        private static void BuildTutorial(RectTransform parent, HudSources src)
+        {
+            RectTransform panel = NewRect("Goal", parent);
+            Anchor(panel, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(1000f, 46f));
+            Image bg = panel.gameObject.AddComponent<Image>();
+            bg.sprite = rounded;
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.09f, 0.09f, 0.17f, 0.72f);
+            Text label = NewText("Label", panel, "Obiettivo", 24, Gold, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            Stretch(label.rectTransform, 6f);
+
+            // Il componente sta su un oggetto sempre attivo (il pannello può nascondersi da solo).
+            TutorialHintView view = parent.gameObject.AddComponent<TutorialHintView>();
+            Wire.Ref(view, "carrier", src.Carrier);
+            Wire.Ref(view, "bench", src.Bench);
+            Wire.Ref(view, "session", src.Session);
+            Wire.Ref(view, "orders", src.Orders);
+            Wire.Ref(view, "root", panel.gameObject);
+            Wire.Ref(view, "label", label);
+            Wire.Ref(view, "marker", src.MarkerObject);
+            Wire.Ref(view, "shelfTarget", src.ShelfAnchor);
+            Wire.Ref(view, "benchTarget", src.Bench != null ? src.Bench.transform : null);
+            Wire.Ref(view, "sleighTarget", src.SleighAnchor);
+        }
+
         // ================================================================== suggerimenti contestuali
         private static InteractionPromptView BuildPrompts(RectTransform parent, HudSources src)
         {
@@ -261,8 +292,8 @@ namespace Elfshift.EditorTools
             layout.childForceExpandHeight = false;
 
             Text pickupKey, pickupLabel, interactKey, interactLabel;
-            GameObject pickupChip = BuildChip(bar, "PickupChip", out pickupKey, out pickupLabel);
-            GameObject interactChip = BuildChip(bar, "InteractChip", out interactKey, out interactLabel);
+            GameObject pickupChip = BuildChip(bar, "PickupChip", 120f, out pickupKey, out pickupLabel);
+            GameObject interactChip = BuildChip(bar, "InteractChip", 64f, out interactKey, out interactLabel);
 
             // barra di avanzamento sopra i suggerimenti
             RectTransform progress = NewRect("HoldProgress", parent);
@@ -281,7 +312,12 @@ namespace Elfshift.EditorTools
             fillImage.type = Image.Type.Sliced;
             fillImage.color = Gold;
 
+            Text hint = NewText("FarHint", parent, "Avvicinati", 28, Cream, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            Anchor(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 120f), new Vector2(800f, 40f));
+            hint.gameObject.SetActive(false);
+
             InteractionPromptView view = parent.gameObject.AddComponent<InteractionPromptView>();
+            Wire.Ref(view, "hintLabel", hint);
             Wire.Ref(view, "interactor", src.Interactor);
             Wire.Ref(view, "pickupChip", pickupChip);
             Wire.Ref(view, "pickupKeyText", pickupKey);
@@ -294,7 +330,7 @@ namespace Elfshift.EditorTools
             return view;
         }
 
-        private static GameObject BuildChip(RectTransform parent, string name, out Text key, out Text label)
+        private static GameObject BuildChip(RectTransform parent, string name, float keyMinWidth, out Text key, out Text label)
         {
             RectTransform chip = NewRect(name, parent);
             chip.sizeDelta = new Vector2(10f, 56f);
@@ -320,7 +356,7 @@ namespace Elfshift.EditorTools
             keyImage.type = Image.Type.Sliced;
             keyImage.color = Cream;
             LayoutElement keyLayout = keyBox.gameObject.AddComponent<LayoutElement>();
-            keyLayout.minWidth = 64f;
+            keyLayout.minWidth = keyMinWidth;
             keyLayout.minHeight = 42f;
             keyLayout.preferredHeight = 42f;
             key = NewText("KeyText", keyBox, "E", 22, Ink, TextAnchor.MiddleCenter, FontStyle.Bold, false);

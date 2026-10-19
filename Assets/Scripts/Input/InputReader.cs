@@ -11,8 +11,9 @@ namespace Elfshift.Core
     /// Controlli:
     ///   Movimento ..... WASD / frecce / stick sinistro
     ///   Sguardo ....... mouse / stick destro
-    ///   Raccogli/posa . Spazio / pulsante A (Sud)
-    ///   Interagisci ... E / pulsante X (Ovest) - da tenere premuto
+    ///   Raccogli/posa . tasto sinistro del mouse / grilletto destro
+    ///   Salto ......... Spazio / pulsante A (Sud)
+    ///   Interagisci ... E / tasto destro del mouse / pulsante X (Ovest) - da tenere premuto
     ///   Pausa ......... Esc / Start
     /// </summary>
     public sealed class InputReader : MonoBehaviour, IInputProvider
@@ -25,6 +26,7 @@ namespace Elfshift.Core
         private InputAction lookStickAction;
         private InputAction moveAction;
         private InputAction pickupAction;
+        private InputAction jumpAction;
         private InputAction interactAction;
         private InputAction pauseAction;
 
@@ -48,6 +50,7 @@ namespace Elfshift.Core
         }
 
         public bool PickupPressed => pickupAction.WasPressedThisFrame();
+        public bool JumpPressed => jumpAction.WasPressedThisFrame();
         public bool InteractHeld => interactAction.IsPressed();
         public bool PausePressed => pauseAction.WasPressedThisFrame();
 
@@ -71,11 +74,16 @@ namespace Elfshift.Core
             lookStickAction = new InputAction("LookStick", InputActionType.Value, "<Gamepad>/rightStick", null, null, "Vector2");
 
             pickupAction = new InputAction("Pickup", InputActionType.Button);
-            pickupAction.AddBinding("<Keyboard>/space");
-            pickupAction.AddBinding("<Gamepad>/buttonSouth");
+            pickupAction.AddBinding("<Mouse>/leftButton");
+            pickupAction.AddBinding("<Gamepad>/rightTrigger");
+
+            jumpAction = new InputAction("Jump", InputActionType.Button);
+            jumpAction.AddBinding("<Keyboard>/space");
+            jumpAction.AddBinding("<Gamepad>/buttonSouth");
 
             interactAction = new InputAction("Interact", InputActionType.Button);
             interactAction.AddBinding("<Keyboard>/e");
+            interactAction.AddBinding("<Mouse>/rightButton");
             interactAction.AddBinding("<Gamepad>/buttonWest");
 
             pauseAction = new InputAction("Pause", InputActionType.Button);
@@ -89,6 +97,7 @@ namespace Elfshift.Core
             lookMouseAction.Enable();
             lookStickAction.Enable();
             pickupAction.Enable();
+            jumpAction.Enable();
             interactAction.Enable();
             pauseAction.Enable();
         }
@@ -99,6 +108,7 @@ namespace Elfshift.Core
             lookMouseAction.Disable();
             lookStickAction.Disable();
             pickupAction.Disable();
+            jumpAction.Disable();
             interactAction.Disable();
             pauseAction.Disable();
         }
@@ -109,6 +119,7 @@ namespace Elfshift.Core
             lookMouseAction?.Dispose();
             lookStickAction?.Dispose();
             pickupAction?.Dispose();
+            jumpAction?.Dispose();
             interactAction?.Dispose();
             pauseAction?.Dispose();
         }

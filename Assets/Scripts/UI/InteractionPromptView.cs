@@ -23,6 +23,9 @@ namespace Elfshift.UI
         [SerializeField] private Text interactKeyText;
         [SerializeField] private Text interactLabel;
 
+        [Header("Suggerimento da lontano")]
+        [SerializeField] private Text hintLabel;
+
         [Header("Barra avanzamento")]
         [SerializeField] private GameObject progressRoot;
         [SerializeField] private RectTransform progressFill;
@@ -33,6 +36,7 @@ namespace Elfshift.UI
             if (interactKeyText != null) interactKeyText.text = UiText.KeyInteract;
             SetPrompts(null, null);
             SetProgress(-1f);
+            SetHint(null);
         }
 
         private void OnEnable()
@@ -44,6 +48,7 @@ namespace Elfshift.UI
             }
             interactor.PromptChanged += SetPrompts;
             interactor.HoldProgressChanged += SetProgress;
+            interactor.HintChanged += SetHint;
         }
 
         private void OnDisable()
@@ -51,6 +56,15 @@ namespace Elfshift.UI
             if (interactor == null) return;
             interactor.PromptChanged -= SetPrompts;
             interactor.HoldProgressChanged -= SetProgress;
+            interactor.HintChanged -= SetHint;
+        }
+
+        private void SetHint(string text)
+        {
+            if (hintLabel == null) return;
+            bool visible = !string.IsNullOrEmpty(text);
+            hintLabel.gameObject.SetActive(visible);
+            if (visible) hintLabel.text = text;
         }
 
         private void SetPrompts(string pickup, string interact)

@@ -12,9 +12,11 @@ namespace Elfshift.Core
         Vector2 Move { get; }
         /// <summary>Rotazione dello sguardo in questo frame, in GRADI (x = destra/sinistra, y = su/giù). Mouse e stick destro.</summary>
         Vector2 LookDelta { get; }
-        /// <summary>Spazio / pulsante A: raccogli o posa (vero solo nel frame della pressione).</summary>
+        /// <summary>Tasto sinistro del mouse / grilletto destro: prendi, posa o consegna (vero solo nel frame della pressione).</summary>
         bool PickupPressed { get; }
-        /// <summary>E / pulsante X: interazione, vero finché il tasto è tenuto premuto.</summary>
+        /// <summary>Spazio / pulsante A: salto (vero solo nel frame della pressione).</summary>
+        bool JumpPressed { get; }
+        /// <summary>E / tasto destro del mouse / pulsante X: interazione, vero finché è tenuto premuto.</summary>
         bool InteractHeld { get; }
         /// <summary>Esc / Start: pausa (vero solo nel frame della pressione).</summary>
         bool PausePressed { get; }

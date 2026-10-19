@@ -74,6 +74,30 @@ namespace Elfshift.EditorTools
             return material;
         }
 
+        /// <summary>Materiale per le ombre morbide sotto i mobili (trasparente, senza luce).</summary>
+        public static Material GetBlobShadow(Texture2D softCircle)
+        {
+            Material material;
+            if (cache.TryGetValue("BlobShadow", out material) && material != null) return material;
+            string path = AssetUtil.GeneratedMaterials + "/M_BlobShadow.mat";
+            AssetUtil.EnsureFolder(AssetUtil.GeneratedMaterials);
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null) shader = LitShader();
+            material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.SetTexture("_MainTex", softCircle);
+            material.SetTexture("_BaseMap", softCircle);
+            material.SetColor("_Color", new Color(0.05f, 0.03f, 0.08f, 0.42f));
+            material.SetColor("_BaseColor", new Color(0.05f, 0.03f, 0.08f, 0.42f));
+            EditorUtility.SetDirty(material);
+            cache["BlobShadow"] = material;
+            return material;
+        }
+
         private static void Configure(Material material, MaterialSpec spec)
         {
             material.SetColor("_BaseColor", spec.Color);
