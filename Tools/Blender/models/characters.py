@@ -201,7 +201,6 @@ def _heart(loc_z):
     # sagoma nel piano X-Z, spessore lungo Y; poi la appoggiamo sul dorso (normale +Y) seguendo la piega
     h = k.extrude_outline("Cuore", pts, 0.004, loc=(0, 0, 0), mat="Cream", bevel=0.0012)
     # posizione sulla superficie del dorso
-    u = 0.5
     top = _mitten_shape(0.5, 0.25)  # punto del dorso (v=0.25 -> sin=1 -> +Y)
     h.location = (0.0, top.y + 0.0005, top.z + loc_z)
     h.rotation_euler = (math.radians(-12), 0, 0)
@@ -232,23 +231,6 @@ def _model_fp_arm():
     _heart(0.0)
     _stitches()
     return {"ao_distance": 0.06, "ground": None, "preview_yaw": 150}
-
-
-# ============================================================================ elfo intero (si vede solo come ombra)
-def _model_elf_hand():
-    """Mano piccola (muffola) del corpo intero: punta verso -Z, origine al polso."""
-    random.seed(3)
-    bm = bmesh.new()
-
-    def f(u, v):
-        p = _mitten_shape(u, v)
-        return Vector((p.x * 0.72, p.y * 0.72, -(p.z - MIT_Z0) * 0.72))
-
-    _grid_surface(bm, f, 16, 16)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    _obj_from_bm("ManoElfo", bm, ["RedSanta"])
-    return {"ao_distance": 0.03, "ground": None}
 
 
 MODELS = {

@@ -150,16 +150,16 @@ namespace Elfshift.EditorTools
             else if (kind == "Toys")
             {
                 // vetrina dei giocattoli finiti (scenografia): orsetti, robot, tamburi, trottole, cubi, palloni
-                string[] furs = { "CookieBrown", "WoodLight", "ClothPink", "Cream", "ClothPurple" };
-                for (int i = 0; i < 5; i++)
-                    DecorModels.AddTeddy(mb, new Vector3(-0.95f + i * 0.47f, b0, 0.0f), 1.0f, furs[i], (i - 2) * 9f);
-                string[] bodies = { "ClothBlue", "ClothTeal", "ClothOrange", "ClothPurple" };
+                // (pochi pezzi ben distanziati: ogni giocattolo è un modello dettagliato, ci sono tre vetrine)
+                string[] furs = { "CookieBrown", "ClothPink", "Cream", "ClothPurple" };
                 for (int i = 0; i < 4; i++)
-                    DecorModels.AddRobot(mb, new Vector3(-0.9f + i * 0.55f, b1, 0.02f), 1.0f, bodies[i], (i - 1.5f) * 10f);
-                DecorModels.AddDrum(mb, new Vector3(1.0f, b1, 0.1f), 1.0f);
+                    DecorModels.AddTeddy(mb, new Vector3(-0.85f + i * 0.57f, b0, 0.0f), 1.0f, furs[i], (i - 1.5f) * 9f);
+                string[] bodies = { "ClothBlue", "ClothTeal", "ClothOrange" };
+                for (int i = 0; i < 3; i++)
+                    DecorModels.AddRobot(mb, new Vector3(-0.85f + i * 0.6f, b1, 0.02f), 1.0f, bodies[i], (i - 1f) * 10f);
+                DecorModels.AddDrum(mb, new Vector3(0.95f, b1, 0.1f), 1.0f);
                 DecorModels.AddBlocks(mb, new Vector3(-0.85f, b2, 0.05f), 1.3f);
-                DecorModels.AddSpinTop(mb, new Vector3(-0.35f, b2, 0.05f), 1.4f, "ClothYellow");
-                DecorModels.AddSpinTop(mb, new Vector3(0.0f, b2, 0.05f), 1.4f, "RedSanta");
+                DecorModels.AddSpinTop(mb, new Vector3(-0.2f, b2, 0.05f), 1.4f, "RedSanta");
                 DecorModels.AddBeachBall(mb, new Vector3(0.5f, b2, 0.05f), 0.16f);
                 DecorModels.AddDrum(mb, new Vector3(0.95f, b2, 0.0f), 0.8f);
             }

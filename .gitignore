@@ -21,3 +21,7 @@ sysinfo.txt
 *.apk
 *.aab
 *.unitypackage
+
+# Python (script di Blender)
+__pycache__/
+*.pyc

@@ -48,7 +48,7 @@ def rot_vec(v, rot):
 
 
 # ---------------------------------------------------------------------------- forme in coordinate Unity
-def ubox(name, center, size, mat, bevel=0.01, rot=(0, 0, 0), seg=3, tint=0.03):
+def ubox(name, center, size, mat, bevel=0.01, rot=(0, 0, 0), seg=2, tint=0.03):
     o = k.box(name, S(*size), P(*center), mat=mat, bevel=bevel, segments=seg, tint=tint)
     o.rotation_euler = R(*rot)
     return o
@@ -254,7 +254,7 @@ def log(center, radius, length, yaw=0.0, roll=0.0, rng=None):
     """Tronchetto: corteccia irregolare, sezioni chiare con anello scuro. Asse lungo X di Unity (yaw lo gira)."""
     rng = rng or random
     prof = [(0.0, 0.0), (radius * 0.86, 0.0)]
-    n = 5
+    n = 3
     for i in range(n + 1):
         t = i / n
         r = radius * (1.0 + rng.uniform(-0.05, 0.05))
@@ -267,9 +267,9 @@ def log(center, radius, length, yaw=0.0, roll=0.0, rng=None):
     for end in (0.0, 1.0):
         y = -length / 2 - 0.004 + end * (length + 0.008)
         c = Vector(center) + rot_vec((0, y, 0), rot)
-        objs.append(ucyl("Taglio", tuple(c), radius * 0.84, 0.012, "WoodEnd", rot=rot, bevel=0.003, verts=11, seg=1, tint=0.04))
+        objs.append(ucyl("Taglio", tuple(c), radius * 0.84, 0.012, "WoodEnd", rot=rot, bevel=0.0, verts=11, seg=1, tint=0.04))
         c2 = Vector(center) + rot_vec((0, y * 1.012, 0), rot)
-        objs.append(ucyl("Anello", tuple(c2), radius * 0.36, 0.012, "WoodLight", rot=rot, bevel=0.002, verts=9, seg=1, tint=0.04))
+        objs.append(ucyl("Anello", tuple(c2), radius * 0.36, 0.012, "WoodLight", rot=rot, bevel=0.0, verts=8, seg=1, tint=0.04))
     return objs
 
 
@@ -281,9 +281,10 @@ def log_bundle(origin, scale=1.0):
     log((ox, oy + r, oz - r * 1.05), r, ln, roll=random.uniform(-2, 2))
     log((ox, oy + r, oz + r * 1.05), r, ln, roll=random.uniform(-2, 2))
     log((ox, oy + r + r * 1.8, oz), r, ln, roll=random.uniform(-2, 2))
-    ring_r = r * 1.95
+    ring_r = r * 2.24
     for i in (-1, 1):
-        utorus("Nastro", (ox + i * 0.15 * scale, oy + r * 1.35, oz), ring_r, 0.014 * scale, "RedSanta", rot=(0, 0, 90), mseg=24, nseg=6)
+        band = utorus("Nastro", (ox + i * 0.15 * scale, oy + r * 1.6, oz), ring_r, 0.018 * scale, "RedSanta", rot=(0, 0, 90), mseg=20, nseg=4)
+        flatten(band, 1.8, 1.0, 1.0)
     bow((ox + 0.15 * scale, oy + r * 3.15, oz), 0.11 * scale, "RedSanta", yaw=90)
 
 
@@ -330,7 +331,7 @@ def gift(base, size, box_mat, rib_mat, yaw=0.0):
 def gear(center, radius, mat, thick=0.06, teeth=10):
     """Ingranaggio verticale rivolto verso +Z, con mozzo e bulloni."""
     cx, cy, cz = center
-    uprism("Ingranaggio", gear_outline(radius, teeth), thick, front_frame(cx, cy, cz), mat, bevel=0.006)
+    uprism("Ingranaggio", gear_outline(radius, teeth), thick, front_frame(cx, cy, cz), mat, bevel=0.006, bevel_seg=1)
     ucyl("Mozzo", (cx, cy, cz + thick * 0.5), radius * 0.32, thick * 0.6, "Iron", rot=(90, 0, 0), bevel=0.004, verts=16)
     ucyl("Foro", (cx, cy, cz + thick * 0.82), radius * 0.12, 0.01, "Black", rot=(90, 0, 0), bevel=0.002, verts=12, seg=1)
     for i in range(4):
@@ -345,12 +346,13 @@ def shelf_frame():
     for sx in (-1, 1):
         x = sx * (w / 2 - 0.05)
         side = ubox("Fianco", (x, h / 2, 0), (0.1, h, d), "WoodMid", bevel=0.022)
-        wob(side, 0.004, 0.5)
+        wob(side, 0.004, 0.5, levels=0)
         ubox("Cornice", (x, h / 2 + 0.01, d / 2 - 0.005), (0.13, h + 0.02, 0.04), "WoodDark", bevel=0.014)
         # piedini
         ubox("Piede", (x, 0.03, d / 2 - 0.08), (0.15, 0.06, 0.16), "WoodDeep", bevel=0.02)
         ubox("Piede", (x, 0.03, -d / 2 + 0.08), (0.15, 0.06, 0.16), "WoodDeep", bevel=0.02)
-    # schienale a doghe verticali
+    # schienale a doghe verticali (con un fondo pieno dietro, così tra le doghe non passa luce)
+    ubox("Fondo", (0, h / 2, -d / 2 + 0.006), (w - 0.12, h - 0.04, 0.012), "WoodDeep", bevel=0.0, seg=1, tint=0.0)
     n = 7
     inner = w - 0.14
     pw = inner / n
@@ -362,7 +364,7 @@ def shelf_frame():
     board_y = [0.2, 0.85, 1.5, 2.26]
     for i, y in enumerate(board_y):
         b = ubox("Ripiano", (0, y, 0.005), (w - 0.1, 0.07, d - 0.03), "WoodLight", bevel=0.018, tint=0.04)
-        wob(b, 0.003, 0.4)
+        wob(b, 0.003, 0.4, levels=0)
         if i < 3:
             ubox("Bordino", (0, y + 0.075, d / 2 - 0.025), (w - 0.14, 0.09, 0.03), "WoodDeep", bevel=0.012)
             for sx in (-1, 1):
@@ -375,16 +377,16 @@ def shelf_frame():
                 uprism("Mensola", tri, 0.04, frame, "WoodMid", bevel=0.006)
     # coronamento in alto con modanatura
     top = ubox("Cappello", (0, h + 0.03, 0.02), (w + 0.12, 0.08, d + 0.1), "WoodMid", bevel=0.028)
-    wob(top, 0.003, 0.5)
+    wob(top, 0.003, 0.5, levels=0)
     ucyl("Modanatura", (0, h - 0.03, d / 2 + 0.005), 0.035, w - 0.02, "WoodDeep", rot=(0, 0, 90), bevel=0.004, verts=14)
     # zoccolo
     ubox("Zoccolo", (0, 0.09, d / 2 - 0.05), (w - 0.12, 0.15, 0.04), "WoodDeep", bevel=0.012)
     # neve morbida sopra, con piccoli ghiaccioli sul davanti
-    blanket = usphere("Neve", (0.0, h + 0.06, 0.03), 1.0, "Snow", scale=(1.2, 0.09, 0.42), seg=24, rings=10)
+    blanket = usphere("Neve", (0.0, h + 0.06, 0.03), 1.0, "Snow", scale=(1.2, 0.09, 0.42), seg=20, rings=8)
     soft(blanket, 1)
     wob(blanket, 0.03, 0.25, levels=0)
     for (x, z, r, hy) in ((-0.6, 0.0, 0.32, 0.5), (0.35, 0.08, 0.38, 0.42), (0.85, -0.05, 0.22, 0.6)):
-        m = usphere("Mucchio", (x, h + 0.1, z), r, "Snow", scale=(1.0, hy, 0.8), seg=14, rings=7)
+        m = usphere("Mucchio", (x, h + 0.1, z), r, "Snow", scale=(1.0, hy, 0.8), seg=12, rings=6)
         soft(m, 1)
         wob(m, 0.02, 0.2, levels=0)
     for (x, ln) in ((-0.9, 0.09), (-0.62, 0.14), (-0.3, 0.07), (0.15, 0.11), (0.55, 0.16), (0.8, 0.08)):
@@ -461,10 +463,10 @@ def shelf_goods(kind):
                     x = -0.95 + i * 0.27 + (0.135 if row == 1 else 0.0)
                     c = colors[(i * 3 + row * 2) % len(colors)]
                     y = b0 + 0.13 + row * 0.235
-                    bolt = ucyl("Rotolo", (x, y, 0.0), 0.125, 0.6, c, rot=(90, 0, 0), bevel=0.02, verts=20, seg=3, tint=0.05)
+                    bolt = ucyl("Rotolo", (x, y, 0.0), 0.125, 0.6, c, rot=(90, 0, 0), bevel=0.02, verts=16, seg=2, tint=0.05)
                     jit(bolt, 1.0, 0.003)
                     ucyl("Anima", (x, y, 0.302), 0.05, 0.02, "Cream", rot=(90, 0, 0), bevel=0.004, verts=12)
-                    utorus("Strato", (x, y, 0.3), 0.09, 0.004, c, rot=(90, 0, 0), mseg=20, nseg=4)
+                    utorus("Strato", (x, y, 0.3), 0.09, 0.004, c, rot=(90, 0, 0), mseg=16, nseg=3)
                     if (i + row) % 3 == 0 and row == 1:
                         # lembo di stoffa che scende sul davanti
                         pts = [(x - 0.05, y + 0.1, 0.29), (x - 0.06, y - 0.05, 0.33), (x - 0.04, y - 0.2, 0.33)]
@@ -474,20 +476,19 @@ def shelf_goods(kind):
                 for layer in range(5):
                     c = colors[(s + layer) % len(colors)]
                     yaw = (3 if layer % 2 == 0 else -4) + random.uniform(-2, 2)
-                    p = ubox("Piega", (-0.8 + s * 0.52, b1 + 0.045 + layer * 0.075, 0.02), (0.46, 0.07, 0.4), c, bevel=0.03, rot=(0, yaw, 0), seg=2)
-                    soft(p, 1)
+                    ubox("Piega", (-0.8 + s * 0.52, b1 + 0.045 + layer * 0.075, 0.02), (0.46, 0.07, 0.4), c, bevel=0.032, rot=(0, yaw, 0), seg=3)
                     # bordo cucito
                     ubox("Cucitura", (-0.8 + s * 0.52, b1 + 0.045 + layer * 0.075, 0.22), (0.4, 0.006, 0.006), "Cream", bevel=0.002, rot=(0, yaw, 0), seg=1)
             for i in range(6):
                 x = -0.85 + i * 0.34
                 c = colors[(i + 2) % len(colors)]
-                ulathe("Rocchetto", (x, b2, 0.0), [(0.0, 0.0), (0.1, 0.0), (0.1, 0.028), (0.06, 0.03)], "WoodLight", seg=20)
+                ulathe("Rocchetto", (x, b2, 0.0), [(0.0, 0.0), (0.1, 0.0), (0.1, 0.028), (0.06, 0.03)], "WoodLight", seg=16)
                 prof = [(0.06, 0.028)]
                 for j in range(9):
                     prof.append((0.074 + (0.004 if j % 2 else 0.0), 0.04 + j * 0.019))
                 prof.append((0.06, 0.205))
-                ulathe("Filo", (x, b2, 0.0), prof, c, seg=20)
-                ulathe("Rocchetto", (x, b2 + 0.2, 0.0), [(0.06, 0.0), (0.1, 0.002), (0.1, 0.03), (0.0, 0.03)], "WoodLight", seg=20)
+                ulathe("Filo", (x, b2, 0.0), prof, c, seg=16)
+                ulathe("Rocchetto", (x, b2 + 0.2, 0.0), [(0.06, 0.0), (0.1, 0.002), (0.1, 0.03), (0.0, 0.03)], "WoodLight", seg=16)
         elif kind == "Metal":
             for col in range(2):
                 cx = -0.62 + col * 1.0
@@ -529,7 +530,7 @@ def bench_base():
     for i in range(n):
         z = -d / 2 + 0.01 + pw * (i + 0.5)
         p = ubox("Asse", (0, top - 0.05, z), (w - 0.16, 0.1, pw - 0.008), "WoodLight", bevel=0.014, tint=0.06)
-        wob(p, 0.003, 0.45)
+        wob(p, 0.003, 0.45, levels=0)
     for sx in (-1, 1):
         ubox("Testata", (sx * (w / 2 - 0.045), top - 0.05, 0), (0.09, 0.11, d + 0.02), "WoodMid", bevel=0.02)
         for sz in (-1, 1):
@@ -546,8 +547,8 @@ def bench_base():
         for sz in (-1, 1):
             x, z = sx * (w / 2 - 0.12), sz * (d / 2 - 0.12)
             leg = uprism("Gamba", [(-0.065, 0.0), (0.065, 0.0), (0.072, top - 0.12), (-0.072, top - 0.12)], 0.14,
-                         front_frame(x, 0.0, z), "WoodDark", bevel=0.02, bevel_seg=3)
-            wob(leg, 0.003, 0.4)
+                         front_frame(x, 0.0, z), "WoodDark", bevel=0.02, bevel_seg=2)
+            wob(leg, 0.003, 0.4, levels=0)
             ubox("Piedino", (x, 0.02, z), (0.17, 0.04, 0.17), "WoodDeep", bevel=0.015)
     # traverse e ripiano basso a doghe
     for sx in (-1, 1):
@@ -576,7 +577,7 @@ def bench_base():
         for iy in range(5):
             x = -0.84 + ix * 0.14
             y = top + 0.32 + iy * 0.15
-            ucyl("Foro", (x, y, bz + 0.018), 0.011, 0.004, "WoodDeep", rot=(90, 0, 0), bevel=0.0, verts=8, seg=1, tint=0.0)
+            ucyl("Foro", (x, y, bz + 0.018), 0.011, 0.004, "WoodDeep", rot=(90, 0, 0), bevel=0.0, verts=6, seg=1, tint=0.0)
     return {"ao_distance": 0.4}
 
 
@@ -662,16 +663,16 @@ def bench_props(kind):
             for i, c in enumerate(paints):
                 x = -0.9 + i * 0.45
                 z = -0.28 + random.uniform(-0.03, 0.03)
-                ulathe("Latta", (x, top, z), [(0.0, 0.0), (0.088, 0.0), (0.09, 0.006), (0.09, 0.15), (0.094, 0.155), (0.094, 0.165), (0.0, 0.165)], "MetalLight", seg=22)
-                ulathe("Etichetta", (x, top + 0.035, z), [(0.0915, 0.0), (0.0915, 0.08)], c, seg=22)
-                ucyl("Coperchio", (x, top + 0.17, z), 0.08, 0.012, c, bevel=0.003, verts=20)
+                ulathe("Latta", (x, top, z), [(0.0, 0.0), (0.088, 0.0), (0.09, 0.006), (0.09, 0.15), (0.094, 0.155), (0.094, 0.165), (0.0, 0.165)], "MetalLight", seg=16)
+                ulathe("Etichetta", (x, top + 0.035, z), [(0.0915, 0.0), (0.0915, 0.08)], c, seg=16)
+                ucyl("Coperchio", (x, top + 0.17, z), 0.08, 0.012, c, bevel=0.003, verts=16, seg=1)
                 # colature di vernice
                 for j in range(3):
                     a = random.uniform(0, 2 * math.pi)
                     ln = random.uniform(0.03, 0.08)
                     px, pz = x + math.cos(a) * 0.093, z + math.sin(a) * 0.093
-                    ucyl("Colatura", (px, top + 0.165 - ln / 2, pz), 0.012, ln, c, bevel=0.005, verts=8)
-                    usphere("Goccia", (px, top + 0.165 - ln, pz), 0.014, c, seg=8, rings=5)
+                    ucyl("Colatura", (px, top + 0.165 - ln / 2, pz), 0.012, ln, c, bevel=0.0, verts=6)
+                    usphere("Goccia", (px, top + 0.165 - ln, pz), 0.014, c, seg=6, rings=4)
                 # manico a filo
                 pts = [(x - 0.09, top + 0.15, z), (x - 0.07, top + 0.26, z), (x, top + 0.29, z), (x + 0.07, top + 0.26, z), (x + 0.09, top + 0.15, z)]
                 utube("ManicoLatta", smooth_curve(pts, 3), 0.004, "MetalDark", sides=6)

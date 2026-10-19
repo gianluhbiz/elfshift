@@ -120,7 +120,7 @@ def tmpl_box():
 def tmpl_leaf():
     """Fogliolina appuntita (lungo X), leggermente incurvata, con spessore."""
     bm = bmesh.new()
-    outline = [(-1.0, 0.0), (-0.55, 0.42), (0.0, 0.5), (0.55, 0.36), (1.0, 0.0), (0.55, -0.36), (0.0, -0.5), (-0.55, -0.42)]
+    outline = [(-1.0, 0.0), (-0.35, 0.48), (0.4, 0.4), (1.0, 0.0), (0.4, -0.4), (-0.35, -0.48)]
     top = [bm.verts.new((x, y, 0.12 * (1 - x * x))) for x, y in outline]
     bot = [bm.verts.new((x, y, -0.05 + 0.12 * (1 - x * x))) for x, y in outline]
     c1 = bm.verts.new((0, 0, 0.2))
@@ -420,15 +420,15 @@ def tree_star():
 def bulb_glass(mat):
     def build():
         # lampadina a goccia che pende verso il basso; l'origine è il punto d'attacco sul filo
-        k.lathe("Vetro", [(0, -0.125), (0.012, -0.123), (0.026, -0.112), (0.036, -0.092), (0.04, -0.07),
-                          (0.036, -0.05), (0.026, -0.036), (0.018, -0.028), (0, -0.028)], mat=mat, segments=12)
+        k.lathe("Vetro", [(0, -0.125), (0.02, -0.118), (0.036, -0.092), (0.039, -0.066),
+                          (0.03, -0.042), (0.018, -0.028), (0, -0.028)], mat=mat, segments=8)
         return {"ao": False}
     return build
 
 
 def bulb_cap():
-    k.lathe("Portalampada", [(0, -0.034), (0.019, -0.034), (0.021, -0.028), (0.02, -0.008), (0.014, -0.0), (0, 0.004)],
-            mat="GreenDeep", segments=10)
+    k.lathe("Portalampada", [(0, -0.034), (0.02, -0.032), (0.02, -0.008), (0.012, 0.0), (0, 0.004)],
+            mat="GreenDeep", segments=6)
     return {"ao": False}
 
 
@@ -438,7 +438,7 @@ WINDOW_W, WINDOW_H = 2.6, 2.4
 
 def _curtain(name, x_inner, x_outer, top, bottom, tie_z, depth_y, mat="RedSanta", folds=5):
     """Tenda morbida a pieghe, raccolta da un fermatenda. x_inner = bordo verso la finestra."""
-    cols, rows = 20, 16
+    cols, rows = 12, 9
     verts, faces = [], []
     width = abs(x_outer - x_inner)
     sgn = 1 if x_outer > x_inner else -1
@@ -472,83 +472,64 @@ def window():
     w, h = WINDOW_W, WINDOW_H
     t = 0.12
     # telaio esterno (profondità 0.34) e cornice interna verso la stanza (-Y)
-    k.box("TelaioSu", (w + t, 0.34, t), (0, 0, h - t / 2), mat="WoodLight", bevel=0.025)
-    k.box("TelaioGiu", (w + t, 0.34, t), (0, 0, t / 2), mat="WoodLight", bevel=0.025)
-    k.box("TelaioSx", (t, 0.34, h), (-w / 2, 0, h / 2), mat="WoodLight", bevel=0.025)
-    k.box("TelaioDx", (t, 0.34, h), (w / 2, 0, h / 2), mat="WoodLight", bevel=0.025)
+    k.box("TelaioSu", (w + t, 0.34, t), (0, 0, h - t / 2), mat="WoodLight", bevel=0.025, segments=1)
+    k.box("TelaioGiu", (w + t, 0.34, t), (0, 0, t / 2), mat="WoodLight", bevel=0.025, segments=1)
+    k.box("TelaioSx", (t, 0.34, h), (-w / 2, 0, h / 2), mat="WoodLight", bevel=0.025, segments=1)
+    k.box("TelaioDx", (t, 0.34, h), (w / 2, 0, h / 2), mat="WoodLight", bevel=0.025, segments=1)
     # cornice modanata interna
     m = 0.06
-    k.box("CornSu", (w + t + 0.14, 0.05, m), (0, -0.18, h + 0.01), mat="WoodMid", bevel=0.015)
-    k.box("CornSx", (m, 0.05, h + 0.06), (-(w + t) / 2 - 0.04, -0.18, h / 2), mat="WoodMid", bevel=0.015)
-    k.box("CornDx", (m, 0.05, h + 0.06), ((w + t) / 2 + 0.04, -0.18, h / 2), mat="WoodMid", bevel=0.015)
-    k.box("Capitello", (w + t + 0.3, 0.12, 0.09), (0, -0.16, h + 0.08), mat="WoodLight", bevel=0.02)
+    k.box("CornSu", (w + t + 0.14, 0.05, m), (0, -0.18, h + 0.01), mat="WoodMid", bevel=0.015, segments=1)
+    k.box("CornSx", (m, 0.05, h + 0.06), (-(w + t) / 2 - 0.04, -0.18, h / 2), mat="WoodMid", bevel=0.015, segments=1)
+    k.box("CornDx", (m, 0.05, h + 0.06), ((w + t) / 2 + 0.04, -0.18, h / 2), mat="WoodMid", bevel=0.015, segments=1)
+    k.box("Capitello", (w + t + 0.3, 0.12, 0.09), (0, -0.16, h + 0.08), mat="WoodLight", bevel=0.02, segments=1)
     # ante: telaietti con croce e piccoli listelli
-    k.box("Montante", (0.075, 0.12, h - t), (0, 0.02, h / 2), mat="WoodMid", bevel=0.018)
-    k.box("Traverso", (w - t, 0.12, 0.075), (0, 0.02, h * 0.55), mat="WoodMid", bevel=0.018)
+    k.box("Montante", (0.075, 0.12, h - t), (0, 0.02, h / 2), mat="WoodMid", bevel=0.018, segments=1)
+    k.box("Traverso", (w - t, 0.12, 0.075), (0, 0.02, h * 0.55), mat="WoodMid", bevel=0.018, segments=1)
     # listelli sottili: ogni anta ha 2 x 3 riquadri
     for sx in (-1, 1):
-        k.box("ListelloV", (0.035, 0.07, h - 2 * t), (sx * w / 4, 0.02, h / 2), mat="WoodMid", bevel=0.01)
+        k.box("ListelloV", (0.035, 0.07, h - 2 * t), (sx * w / 4, 0.02, h / 2), mat="WoodMid", bevel=0.01, segments=1)
     for zz in (0.3, 0.8):
-        k.box("ListelloO", (w - t, 0.07, 0.035), (0, 0.02, h * zz), mat="WoodMid", bevel=0.01)
+        k.box("ListelloO", (w - t, 0.07, 0.035), (0, 0.02, h * zz), mat="WoodMid", bevel=0.01, segments=1)
     # davanzale con bordo arrotondato e mensole
-    k.box("Davanzale", (w + 0.5, 0.5, 0.1), (0, -0.12, -0.04), mat="WoodMid", bevel=0.035)
-    k.box("DavanzaleBordo", (w + 0.56, 0.06, 0.07), (0, -0.37, -0.03), mat="WoodLight", bevel=0.025)
+    k.box("Davanzale", (w + 0.5, 0.5, 0.1), (0, -0.12, -0.04), mat="WoodMid", bevel=0.035, segments=2)
+    k.box("DavanzaleBordo", (w + 0.56, 0.06, 0.07), (0, -0.37, -0.03), mat="WoodLight", bevel=0.025, segments=1)
     for sx in (-1, 1):
         k.extrude_outline("Mensola", [(0, 0), (0.0, -0.22), (0.06, -0.22), (0.18, -0.08), (0.18, 0)], 0.07,
                           loc=(sx * (w / 2 - 0.1), -0.25, -0.09), rot=(0, 0, 90), mat="WoodDark", bevel=0.01)
     # neve morbida sul davanzale (più alta verso l'esterno)
-    for i, (x, sx, sz) in enumerate([(-w * 0.28, 0.62, 0.09), (w * 0.05, 0.45, 0.07), (w * 0.3, 0.55, 0.085)]):
+    for i, (x, sx, sz) in enumerate([(-w * 0.22, 0.75, 0.09), (w * 0.25, 0.7, 0.08)]):
         lumpy_blob("NeveDav%d" % i, (x, -0.05, 0.01), (sx, 0.2, sz), sub=2, amount=0.22, seed=i, flat_bottom=0.0)
-    lumpy_blob("NeveFuori", (0, 0.2, 0.0), (w * 0.5, 0.12, 0.07), sub=2, amount=0.2, seed=7, flat_bottom=0.0)
     # tende rosse raccolte con fermatende dorati
     for sx in (-1, 1):
         x_in = sx * (w / 2 - 0.22)
         x_out = sx * (w / 2 + 0.3)
         _curtain("Tenda", x_in, x_out, h + 0.1, 0.12, h * 0.42, -0.28)
         cx = sx * (w / 2 + 0.11)
-        tb = k.torus("Fermatenda", 0.11, 0.022, (cx, -0.28, h * 0.42), (90, 0, 0), mat="Gold", major_seg=24, minor_seg=8)
+        tb = k.torus("Fermatenda", 0.11, 0.022, (cx, -0.28, h * 0.42), (90, 0, 0), mat="Gold", major_seg=14, minor_seg=5)
         tb.scale = (1.0, 1.0, 0.5)
-        k.sphere("Nappina", 0.03, (cx - sx * 0.1, -0.33, h * 0.42 - 0.02), mat="Gold", segments=10, rings=6)
-        k.lathe("Fiocco", [(0, 0), (0.025, 0.0), (0.03, -0.06), (0.04, -0.13), (0, -0.14)], loc=(cx - sx * 0.1, -0.33, h * 0.42 - 0.04), mat="Gold", segments=10)
+        k.lathe("Fiocco", [(0, 0.03), (0.025, 0.0), (0.03, -0.06), (0.04, -0.13), (0, -0.14)], loc=(cx - sx * 0.1, -0.33, h * 0.42 - 0.04), mat="Gold", segments=7)
     # bastone delle tende con pomoli
-    k.cylinder("Bastone", 0.025, w + 0.9, (0, -0.28, h + 0.12), rot=(0, 90, 0), mat="WoodDeep", bevel=0.005, verts=12)
+    k.cylinder("Bastone", 0.025, w + 0.9, (0, -0.28, h + 0.12), rot=(0, 90, 0), mat="WoodDeep", bevel=0.0, verts=8)
     for sx in (-1, 1):
-        k.sphere("Pomolo", 0.055, (sx * (w + 0.9) / 2, -0.28, h + 0.12), mat="Gold", segments=14, rings=8)
-        k.cylinder("Supporto", 0.015, 0.14, (sx * (w / 2 + 0.25), -0.21, h + 0.12), rot=(90, 0, 0), mat="Iron", bevel=0.003, verts=8)
+        k.sphere("Pomolo", 0.055, (sx * (w + 0.9) / 2, -0.28, h + 0.12), mat="Gold", segments=10, rings=6)
+        k.cylinder("Supporto", 0.015, 0.14, (sx * (w / 2 + 0.25), -0.21, h + 0.12), rot=(90, 0, 0), mat="Iron", bevel=0.0, verts=6)
     # festone di pino con foglioline, palline e fiocchi
     p0, p1, p2, p3 = Vector((-w / 2 - 0.15, -0.24, h + 0.06)), Vector((-w / 4, -0.3, h - 0.38)), Vector((w / 4, -0.3, h - 0.38)), Vector((w / 2 + 0.15, -0.24, h + 0.06))
     pts = []
     for i in range(25):
         u = i / 24
         pts.append(p0 * (1 - u) ** 3 + p1 * 3 * u * (1 - u) ** 2 + p2 * 3 * u * u * (1 - u) + p3 * u ** 3)
-    k.tube("FestoneAnima", pts, 0.05, mat="GreenDeep", sides=8)
-    leaf = tmpl_leaf()
-    ba = Batch("FestoneFoglie", "GreenPine")
-    bb = Batch("FestoneFoglie2", "GreenDeep")
-    random.seed(5)
-    for i in range(len(pts) - 1):
-        a, b = pts[i], pts[i + 1]
-        tan = (b - a).normalized()
-        for jj in range(4):
-            p = a.lerp(b, random.random())
-            ang = random.uniform(0, 2 * math.pi)
-            side = tan.cross(Vector((0, 0, 1))).normalized()
-            up = tan.cross(side).normalized()
-            off = (side * math.cos(ang) + up * math.sin(ang))
-            d = (tan * random.uniform(-0.6, 0.6) + off).normalized()
-            m = look_matrix(p + off * 0.055, d, scale=(0.06, 0.022, 0.03))
-            (ba if jj % 2 else bb).add(leaf, m)
-    ba.build()
-    bb.build()
+    fest = k.tube("FestoneAnima", pts, 0.065, mat="GreenPine", sides=7)
+    bumpy(fest, 0.03, 18.0, seed=2)
     for i, idx in enumerate(range(2, len(pts) - 1, 3)):
         p = pts[idx]
-        k.sphere("PallinaF", 0.04, (p.x, p.y - 0.06, p.z - 0.05), mat="RedSanta" if i % 2 == 0 else "Gold", segments=12, rings=8)
+        k.sphere("PallinaF", 0.04, (p.x, p.y - 0.06, p.z - 0.05), mat="RedSanta" if i % 2 == 0 else "Gold", segments=8, rings=5)
     for sx in (-1, 1):
         p = p0 if sx < 0 else p3
         for side in (-1, 1):
-            loop = k.torus("FioccoAnello", 0.06, 0.02, (p.x + side * 0.06, p.y - 0.06, p.z - 0.02), (90, side * 30, 0), mat="RedSanta", major_seg=16, minor_seg=6)
+            loop = k.torus("FioccoAnello", 0.06, 0.02, (p.x + side * 0.06, p.y - 0.06, p.z - 0.02), (90, side * 30, 0), mat="RedSanta", major_seg=10, minor_seg=5)
             loop.scale = (1.0, 0.6, 1.0)
-        k.sphere("FioccoNodo", 0.03, (p.x, p.y - 0.07, p.z - 0.02), mat="RedDeep", segments=10, rings=6)
+        k.sphere("FioccoNodo", 0.03, (p.x, p.y - 0.07, p.z - 0.02), mat="RedDeep", segments=8, rings=5)
         for side in (-1, 1):
             k.box("FioccoCoda", (0.035, 0.012, 0.16), (p.x + side * 0.03, p.y - 0.07, p.z - 0.11), (0, side * 18, 0), mat="RedSanta", bevel=0.004, segments=1)
     return {"ao_distance": 0.3, "ao_samples": 32, "ground": None}
@@ -559,15 +540,15 @@ def cork_board():
     random.seed(31)
     W, H = 2.0, 1.3
     # cornice a listelli con angoli sovrapposti
-    k.box("Fondo", (W - 0.1, 0.05, H - 0.1), (0, 0.02, 0), mat="WoodDark", bevel=0.01)
+    k.box("Fondo", (W - 0.1, 0.05, H - 0.1), (0, 0.02, 0), mat="WoodDark", bevel=0.0)
     for sz in (-1, 1):
-        k.box("CorniceO", (W + 0.04, 0.11, 0.12), (0, -0.0, sz * (H / 2 - 0.05)), mat="WoodMid", bevel=0.025)
+        k.box("CorniceO", (W + 0.04, 0.11, 0.12), (0, -0.0, sz * (H / 2 - 0.05)), mat="WoodMid", bevel=0.025, segments=2)
     for sx in (-1, 1):
-        k.box("CorniceV", (0.12, 0.1, H - 0.1), (sx * (W / 2 - 0.05), 0.003, 0), mat="WoodMid", bevel=0.025)
+        k.box("CorniceV", (0.12, 0.1, H - 0.1), (sx * (W / 2 - 0.05), 0.003, 0), mat="WoodMid", bevel=0.025, segments=2)
         for sz in (-1, 1):
-            k.cylinder("Chiodo", 0.016, 0.02, (sx * (W / 2 - 0.05), -0.06, sz * (H / 2 - 0.05)), rot=(90, 0, 0), mat="Iron", bevel=0.004, verts=10)
+            k.cylinder("Chiodo", 0.016, 0.02, (sx * (W / 2 - 0.05), -0.06, sz * (H / 2 - 0.05)), rot=(90, 0, 0), mat="Iron", bevel=0.0, verts=8)
     cork = k.box("Sughero", (W - 0.2, 0.05, H - 0.2), (0, -0.02, 0), mat="Cork", bevel=0.008)
-    k.wobble(cork, 0.004, 0.3)
+    k.wobble(cork, 0.004, 0.3, levels=1)
     # letterine appuntate (spostate per non toccarsi)
     lx = [-0.62, -0.2, 0.24, 0.66, -0.42, 0.42, 0.02]
     lz = [0.18, 0.24, 0.17, 0.21, -0.27, -0.22, -0.28]
@@ -588,15 +569,16 @@ def cork_board():
         else:
             # busta con sigillo di ceralacca
             group.append(k.extrude_outline("Lembo", [(-w_ / 2, h_ / 2), (0, 0.0), (w_ / 2, h_ / 2)][::-1], 0.004, loc=(0, -0.006, 0), mat="Plaster", bevel=0.001))
-            group.append(k.cylinder("Sigillo", 0.03, 0.01, (0, -0.012, 0.0), rot=(90, 0, 0), mat="RedDeep", bevel=0.004, verts=14))
+            group.append(k.cylinder("Sigillo", 0.03, 0.01, (0, -0.012, 0.0), rot=(90, 0, 0), mat="RedDeep", bevel=0.003, verts=10))
         pin = pin_mats[i % len(pin_mats)]
-        group.append(k.sphere("Puntina", 0.022, (0, -0.03, h_ / 2 - 0.05), mat=pin, segments=12, rings=8))
-        group.append(k.cylinder("PuntinaGambo", 0.006, 0.03, (0, -0.012, h_ / 2 - 0.05), rot=(90, 0, 0), mat="MetalLight", bevel=0.001, verts=6))
+        group.append(k.sphere("Puntina", 0.022, (0, -0.03, h_ / 2 - 0.05), mat=pin, segments=8, rings=5))
+        group.append(k.cylinder("PuntinaGambo", 0.006, 0.03, (0, -0.012, h_ / 2 - 0.05), rot=(90, 0, 0), mat="MetalLight", bevel=0.0, verts=5))
         m = trs((x, -0.055, z), (0, a, 0))
         for o in group:
             o.matrix_basis = m @ o.matrix_basis
     # stella decorativa e due rametti di agrifoglio in alto
-    puffy_star("Stella", (0, -0.05, H / 2 + 0.12), 0.15, 0.07, 0.06, mat="Gold")
+    st = puffy_star("Stella", (0, -0.05, H / 2 + 0.12), 0.15, 0.07, 0.06, mat="Gold")
+    st.modifiers["Smusso"].segments = 2
     leaf = tmpl_leaf()
     hb = Batch("Agrifoglio", "GreenDeep")
     for sx in (-1, 1):
@@ -604,7 +586,7 @@ def cork_board():
             d = Vector((sx * math.cos(math.radians(ang)), 0, math.sin(math.radians(ang))))
             hb.add(leaf, look_matrix(Vector((sx * 0.24, -0.08, H / 2 - 0.02)) + d * 0.07, d, up=(0, -1, 0), scale=(0.075, 0.035, 0.03)))
         for j in range(3):
-            k.sphere("Bacca", 0.022, (sx * (0.2 + j * 0.03), -0.11, H / 2 - 0.05 + (j % 2) * 0.03), mat="RedSanta", segments=10, rings=6)
+            k.sphere("Bacca", 0.022, (sx * (0.2 + j * 0.03), -0.11, H / 2 - 0.05 + (j % 2) * 0.03), mat="RedSanta", segments=8, rings=5)
     hb.build()
     return {"ao_distance": 0.2, "ao_samples": 32, "ground": None}
 
@@ -613,10 +595,11 @@ def cork_board():
 def wreath():
     random.seed(41)
     R = 0.6
-    base = k.torus("Base", R, 0.12, (0, 0, 0), (90, 0, 0), mat="GreenDeep", major_seg=40, minor_seg=10)
+    base = k.torus("Base", R, 0.12, (0, 0, 0), (90, 0, 0), mat="GreenDeep", major_seg=28, minor_seg=8)
+    bumpy(base, 0.03, 9.0)
     leaf = tmpl_leaf()
     batches = [Batch("FoglieA", "GreenPine"), Batch("FoglieB", "GreenDeep"), Batch("FoglieC", "GreenLight", tint=0.0)]
-    count = 280
+    count = 170
     for i in range(count):
         a = random.uniform(0, 2 * math.pi)
         b = random.uniform(-math.pi * 0.95, math.pi * 0.25)  # soprattutto sul davanti e sui lati
@@ -627,7 +610,7 @@ def wreath():
         tangent = Vector((-math.sin(a), 0, math.cos(a)))
         d = (tangent * random.choice((-1, 1)) * random.uniform(0.6, 1.0) + normal * random.uniform(0.2, 0.6)).normalized()
         size = random.uniform(0.75, 1.15)
-        m = look_matrix(center + normal * 0.035, d, up=normal, scale=(0.075 * size, 0.045 * size, 0.05))
+        m = look_matrix(center + normal * 0.035, d, up=normal, scale=(0.09 * size, 0.055 * size, 0.06))
         batches[0 if i % 5 < 2 else (1 if i % 5 < 4 else 2)].add(leaf, m)
     for bt in batches:
         bt.build()
@@ -690,16 +673,16 @@ def crate():
     random.seed(51)
     sx, sy, sz = CRATE_SIZE
     post = 0.085
-    k.box("Interno", (sx - 0.08, sy - 0.08, sz - 0.08), (0, 0, sz / 2), mat="WoodDeep", bevel=0.01)
+    k.box("Interno", (sx - 0.08, sy - 0.08, sz - 0.08), (0, 0, sz / 2), mat="WoodDeep", bevel=0.0)
     for x in (-1, 1):
         for y in (-1, 1):
-            p = k.box("Spigolo", (post, post, sz + 0.01), (x * (sx / 2 - post / 2), y * (sy / 2 - post / 2), sz / 2), mat="WoodDark", bevel=0.014)
+            p = k.box("Spigolo", (post, post, sz + 0.01), (x * (sx / 2 - post / 2), y * (sy / 2 - post / 2), sz / 2), mat="WoodDark", bevel=0.014, segments=2)
             k.jitter(p, 0.5, 0.002)
     slats = 3
     gap = 0.03
     sh = (sz - 0.04 - gap * (slats - 1)) / slats
     nails = Batch("Chiodi", "Iron")
-    nail = tmpl_sphere(8, 4)
+    nail = tmpl_sphere(6, 3)
     for face in range(4):
         ang = face * 90
         m = trs((0, 0, 0), (0, 0, ang))
@@ -707,23 +690,23 @@ def crate():
         depth = (sy if face % 2 == 0 else sx) / 2
         for s in range(slats):
             z = 0.02 + sh / 2 + s * (sh + gap)
-            b = k.box("Asse", (length, 0.03, sh), (0, -depth + 0.01, z), mat="WoodLight", bevel=0.012, segments=2)
+            b = k.box("Asse", (length, 0.03, sh), (0, -depth + 0.01, z), mat="WoodLight", bevel=0.012, segments=1)
             b.matrix_basis = m @ trs((random.uniform(-0.01, 0.01), 0, 0), (random.uniform(-1.2, 1.2), 0, 0)) @ b.matrix_basis
             for e in (-1, 1):
-                for zz in (-0.25, 0.25):
+                for zz in (0.0,):
                     nails.add(nail, m @ trs((e * (length / 2 - 0.03), -depth - 0.008, z + zz * sh), (0, 0, 0), (0.012, 0.006, 0.012)))
         # traversa diagonale su ogni lato
         dl = math.hypot(length, sz - 0.1)
-        d = k.box("Diagonale", (dl - 0.04, 0.025, 0.07), (0, -depth - 0.012, sz / 2), (0, math.degrees(math.atan2(sz - 0.1, length)) * (1 if face % 2 else -1), 0), mat="WoodMid", bevel=0.01)
+        d = k.box("Diagonale", (dl - 0.04, 0.025, 0.07), (0, -depth - 0.012, sz / 2), (0, math.degrees(math.atan2(sz - 0.1, length)) * (1 if face % 2 else -1), 0), mat="WoodMid", bevel=0.01, segments=1)
         d.matrix_basis = m @ d.matrix_basis
     # coperchio di assi con due traverse
     planks = 4
     pw = (sx - 0.02) / planks
     for i in range(planks):
-        p = k.box("Coperchio", (pw - 0.012, sy - 0.02, 0.035), (-sx / 2 + 0.01 + pw * (i + 0.5), 0, sz + 0.012), mat="WoodMid", bevel=0.01, segments=2)
+        p = k.box("Coperchio", (pw - 0.012, sy - 0.02, 0.035), (-sx / 2 + 0.01 + pw * (i + 0.5), 0, sz + 0.012), mat="WoodMid", bevel=0.01, segments=1)
         k.jitter(p, 0.6, 0.003)
     for y in (-1, 1):
-        k.box("TraversaCoperchio", (sx - 0.08, 0.07, 0.025), (0, y * (sy / 2 - 0.12), sz + 0.04), mat="WoodDark", bevel=0.008)
+        k.box("TraversaCoperchio", (sx - 0.08, 0.07, 0.025), (0, y * (sy / 2 - 0.12), sz + 0.04), mat="WoodDark", bevel=0.008, segments=1)
     nails.build()
     return {"ao_distance": 0.25, "ao_samples": 32}
 
@@ -738,13 +721,13 @@ def _barrel_radius(z):
 def barrel():
     random.seed(61)
     staves = 18
-    rows = [i / 10 * 0.8 for i in range(11)]
+    rows = [i / 8 * 0.8 for i in range(9)]
     gap = 0.012
     for s in range(staves):
         a0 = 2 * math.pi * s / staves + gap / 2 / 0.33
         a1 = 2 * math.pi * (s + 1) / staves - gap / 2 / 0.33
         verts, faces = [], []
-        cols = 3
+        cols = 2
         for zi, z in enumerate(rows):
             r = _barrel_radius(z)
             for c in range(cols + 1):
@@ -768,28 +751,23 @@ def barrel():
             faces.append((o, o + 1, o + 3, o + 2))
             o = last + c * 2
             faces.append((o, o + 2, o + 3, o + 1))
-        obj = _new_obj("Doga%d" % s, verts, faces, ["WoodMid" if s % 3 else "WoodLight"], tint=0.05)
-        b = obj.modifiers.new("Smusso", "BEVEL")
-        b.width = 0.006
-        b.segments = 2
-        b.limit_method = "ANGLE"
-        b.angle_limit = math.radians(50)
+        _new_obj("Doga%d" % s, verts, faces, ["WoodMid" if s % 3 else "WoodLight"], tint=0.05)
     # cerchi di ferro con ribattini
     rivets = Batch("Ribattini", "MetalLight")
-    rv = tmpl_sphere(8, 4)
+    rv = tmpl_sphere(6, 3)
     for zc in (0.1, 0.27, 0.53, 0.7):
         r = _barrel_radius(zc) + 0.004
         k.lathe("Cerchio", [(r - 0.01, zc - 0.028), (r + 0.006, zc - 0.028), (r + 0.01, zc - 0.02), (r + 0.01, zc + 0.02), (r + 0.006, zc + 0.028), (r - 0.01, zc + 0.028)],
-                mat="Iron", segments=48)
-        for j in range(12):
-            a = j * 2 * math.pi / 12 + zc
+                mat="Iron", segments=32)
+        for j in range(8):
+            a = j * 2 * math.pi / 8 + zc
             rivets.add(rv, trs(((r + 0.011) * math.cos(a), (r + 0.011) * math.sin(a), zc), (0, 0, 0), (0.008, 0.008, 0.008)))
     rivets.build()
     # coperchio un po' incassato con le scanalature tra le assi
-    k.cylinder("Coperchio", 0.285, 0.03, (0, 0, 0.76), mat="WoodLight", bevel=0.006, verts=40)
+    k.cylinder("Coperchio", 0.285, 0.03, (0, 0, 0.76), mat="WoodLight", bevel=0.0, verts=24)
     for x in (-0.14, 0.0, 0.14):
         k.box("Scanalatura", (0.008, 2 * math.sqrt(0.28 ** 2 - x * x) - 0.02, 0.006), (x, 0, 0.775), mat="WoodDeep", bevel=0.002, segments=1)
-    k.cylinder("Fondo", 0.29, 0.03, (0, 0, 0.03), mat="WoodDark", bevel=0.005, verts=32)
+    k.cylinder("Fondo", 0.29, 0.03, (0, 0, 0.03), mat="WoodDark", bevel=0.0, verts=18)
     return {"ao_distance": 0.25, "ao_samples": 32}
 
 
@@ -803,11 +781,11 @@ def candy_cane():
     pts.append(pts[-1] + Vector((0, 0, -0.03)))
     fine = []
     for a, b in zip(pts[:-1], pts[1:]):
-        n = max(1, int((b - a).length / 0.008))
+        n = max(1, int((b - a).length / 0.022))
         for i in range(n):
             fine.append(a.lerp(b, i / n))
     fine.append(pts[-1])
-    striped_tube("Bastoncino", fine, 0.028, ("RedSanta", "White"), sides=16, stripes=2, turns_per_meter=7.0)
+    striped_tube("Bastoncino", fine, 0.028, ("RedSanta", "White"), sides=8, stripes=2, turns_per_meter=6.0)
     return {"ao_distance": 0.05, "ground": None}
 
 
@@ -878,31 +856,30 @@ def snowman():
 def pine():
     """Abete alto 5 m (in C# viene scalato all'altezza voluta). Pochi triangoli: ce ne sono 70."""
     random.seed(81)
-    tr = k.cylinder("Tronco", 0.2, 1.0, (0, 0, 0.5), mat="Bark", bevel=0.02, verts=8, radius_top=0.14)
-    z, R = 0.7, 1.3
-    rows = [0.0, 0.25, 0.55, 0.8, 1.0, 1.08, 1.5]
-    rows_s = [0.0, 0.35, 0.7, 1.0, 1.2]
-    for i in range(5):
-        H = 1.5
-        lobes = 7 - (i // 2)
-        f = _tier_profile(R, H, 0.12 * R, lobes, i * 1.3)
-        t = radial("Rami%d" % i, rows, 21, f, "GreenPine" if i % 2 == 0 else "GreenDeep", tint=0.04)
+    tr = k.cylinder("Tronco", 0.2, 1.0, (0, 0, 0.5), mat="Bark", bevel=0.0, verts=6, radius_top=0.14)
+    z, R = 0.7, 1.35
+    rows = [0.0, 0.55, 1.0, 1.6]
+    rows_s = [0.0, 0.6, 1.0, 1.3]
+    for i in range(4):
+        H = 1.75
+        lobes = 6
+        f = _tier_profile(R, H, 0.14 * R, lobes, i * 1.3)
+        t = radial("Rami%d" % i, rows, 12, f, "GreenPine" if i % 2 == 0 else "GreenDeep", tint=0.04)
         t.location.z = z
-        bumpy(t, 0.05 * R, 1.5, seed=i)
-        s = radial("Neve%d" % i, rows_s, 21, _tier_profile(R, H, 0.12 * R, lobes, i * 1.3, snow=True), "Snow", tint=0.0)
+        bumpy(t, 0.04 * R, 1.5, seed=i)
+        s = radial("Neve%d" % i, rows_s, 12, _tier_profile(R, H, 0.14 * R, lobes, i * 1.3, snow=True), "Snow", tint=0.0)
         s.location.z = z
-        bumpy(s, 0.03 * R, 2.0, seed=i + 5)
-        z += H * 0.6
-        R *= 0.8
+        z += H * 0.62
+        R *= 0.76
     return {"ao_distance": 0.6, "ao_samples": 24}
 
 
 # ============================================================================ LAMPIONE
 def lantern_post():
     random.seed(91)
-    k.lathe("Base", [(0, 0), (0.14, 0), (0.14, 0.03), (0.11, 0.06), (0.1, 0.1), (0.07, 0.13), (0.06, 0.22), (0.05, 0.25), (0, 0.25)], mat="Iron", segments=24)
+    k.lathe("Base", [(0, 0), (0.14, 0), (0.14, 0.03), (0.11, 0.06), (0.1, 0.1), (0.07, 0.13), (0.06, 0.22), (0.05, 0.25), (0, 0.25)], mat="Iron", segments=14)
     k.lathe("Palo", [(0, 0.24), (0.042, 0.24), (0.036, 0.9), (0.05, 0.93), (0.05, 0.97), (0.034, 1.0), (0.032, 1.72), (0.05, 1.75), (0.06, 1.8), (0, 1.8)],
-            mat="Iron", segments=16)
+            mat="Iron", segments=10)
     # riccioli decorativi sotto la lanterna
     for sx in (-1, 1):
         pts = []
@@ -911,31 +888,31 @@ def lantern_post():
             a = u * math.pi * 1.6
             r = 0.09 * (1 - u * 0.55)
             pts.append(Vector((sx * (0.035 + 0.09 - math.cos(a) * r), 0, 1.6 + math.sin(a) * r + u * 0.05)))
-        k.tube("Ricciolo", pts, 0.011, mat="Iron", sides=8)
+        k.tube("Ricciolo", pts, 0.011, mat="Iron", sides=5)
     # lanterna: base, montanti, vetro luminoso, tetto a piramide con pinnacolo
-    k.box("PiattoLanterna", (0.3, 0.3, 0.05), (0, 0, 1.83), mat="Iron", bevel=0.012)
+    k.box("PiattoLanterna", (0.3, 0.3, 0.05), (0, 0, 1.83), mat="Iron", bevel=0.012, segments=2)
     for x in (-1, 1):
         for y in (-1, 1):
-            k.box("Montante", (0.03, 0.03, 0.34), (x * 0.125, y * 0.125, 2.02), mat="Iron", bevel=0.006)
+            k.box("Montante", (0.03, 0.03, 0.34), (x * 0.125, y * 0.125, 2.02), mat="Iron", bevel=0.006, segments=1)
     for side in range(4):
         m = trs((0, 0, 0), (0, 0, side * 90))
         for zz in (1.88, 2.17):
-            b = k.box("Traversino", (0.25, 0.02, 0.02), (0, -0.125, zz), mat="Iron", bevel=0.004)
+            b = k.box("Traversino", (0.25, 0.02, 0.02), (0, -0.125, zz), mat="Iron", bevel=0.0)
             b.matrix_basis = m @ b.matrix_basis
     k.box("Vetro", (0.22, 0.22, 0.3), (0, 0, 2.02), mat="LampGlow", bevel=0.03)
     k.lathe("Tetto", [(0, 2.18), (0.23, 2.18), (0.25, 2.2), (0.2, 2.24), (0.06, 2.34), (0.03, 2.36), (0, 2.36)], rot=(0, 0, 45), mat="Iron", segments=4)
-    k.sphere("Pinnacolo", 0.035, (0, 0, 2.39), mat="Iron", segments=12, rings=8)
+    k.sphere("Pinnacolo", 0.035, (0, 0, 2.39), mat="Iron", segments=8, rings=5)
     k.torus("Anello", 0.03, 0.007, (0, 0, 2.43), (90, 0, 0), mat="Iron", major_seg=12, minor_seg=4)
-    lumpy_blob("NeveTetto", (0, 0, 2.26), (0.2, 0.2, 0.06), sub=3, amount=0.25, seed=3, flat_bottom=-0.02)
+    lumpy_blob("NeveTetto", (0, 0, 2.26), (0.2, 0.2, 0.06), sub=2, amount=0.25, seed=3, flat_bottom=-0.02)
     return {"ao_distance": 0.2}
 
 
 # ============================================================================ STACCIONATA
 def fence_post():
-    p = k.box("Palo", (0.14, 0.14, 0.86), (0, 0, 0.43), mat="WoodDark", bevel=0.025)
+    p = k.box("Palo", (0.14, 0.14, 0.86), (0, 0, 0.43), mat="WoodDark", bevel=0.025, segments=2)
     k.jitter(p, 1.0, 0.0)
     k.lathe("Punta", [(0.0, 0.86), (0.09, 0.86), (0.085, 0.9), (0.04, 0.95), (0, 0.96)], rot=(0, 0, 45), mat="WoodDark", segments=4)
-    lumpy_blob("Neve", (0, 0, 0.92), (0.11, 0.11, 0.06), sub=2, amount=0.25, seed=2, flat_bottom=-0.03)
+    lumpy_blob("Neve", (0, 0, 0.92), (0.11, 0.11, 0.06), sub=1, amount=0.25, seed=2, flat_bottom=-0.03)
     return {"ao_distance": 0.2}
 
 
@@ -943,13 +920,13 @@ def fence_span():
     """Tratto di 1 m lungo X (centrato in 0): due traverse con chiodi e neve sopra. In C# si allunga in X."""
     random.seed(97)
     for z, sd in ((0.7, 1), (0.38, 2)):
-        b = k.box("Traversa", (1.04, 0.07, 0.09), (0, -0.07, z), mat="WoodLight", bevel=0.018)
+        b = k.box("Traversa", (1.04, 0.07, 0.09), (0, -0.07, z), mat="WoodLight", bevel=0.018, segments=2)
         k.jitter(b, 0.8, 0.0)
         for x in (-0.49, 0.49):
-            k.cylinder("Chiodo", 0.012, 0.01, (x, -0.11, z), rot=(90, 0, 0), mat="Iron", bevel=0.003, verts=8)
+            k.cylinder("Chiodo", 0.012, 0.01, (x, -0.11, z), rot=(90, 0, 0), mat="Iron", bevel=0.0, verts=6)
     # rotolo di neve morbido sulla traversa alta
-    pts = [Vector((-0.5 + i / 12.0, -0.07, 0.75 + 0.008 * math.sin(i * 1.7))) for i in range(13)]
-    sn = flat_tube("Neve", pts, 0.04, "Snow", scale=(1.0, 1.0, 0.75), sides=10)
+    pts = [Vector((-0.5 + i / 8.0, -0.07, 0.75 + 0.008 * math.sin(i * 1.7))) for i in range(9)]
+    sn = flat_tube("Neve", pts, 0.04, "Snow", scale=(1.0, 1.0, 0.75), sides=7)
     bumpy(sn, 0.01, 8.0, seed=3)
     return {"ao_distance": 0.15, "ground": None}
 
@@ -962,10 +939,10 @@ def rug():
     random.seed(101)
     W, D = RUG_W, RUG_D
     # strati sovrapposti (dal basso): bordo crema, campo rosso, filetto crema, campo interno
-    k.box("Bordo", (W, D, 0.024), (0, 0, 0.012), mat="RugCream", bevel=0.012, segments=2)
-    k.box("Campo", (W - 0.36, D - 0.36, 0.028), (0, 0, 0.014), mat="Rug", bevel=0.01, segments=2)
-    k.box("Filetto", (W - 0.9, D - 0.9, 0.032), (0, 0, 0.016), mat="RugCream", bevel=0.008, segments=2)
-    k.box("CampoInterno", (W - 1.06, D - 1.06, 0.036), (0, 0, 0.018), mat="Rug", bevel=0.008, segments=2)
+    k.box("Bordo", (W, D, 0.024), (0, 0, 0.012), mat="RugCream", bevel=0.012, segments=1)
+    k.box("Campo", (W - 0.36, D - 0.36, 0.028), (0, 0, 0.014), mat="Rug", bevel=0.01, segments=1)
+    k.box("Filetto", (W - 0.9, D - 0.9, 0.032), (0, 0, 0.016), mat="RugCream", bevel=0.008, segments=1)
+    k.box("CampoInterno", (W - 1.06, D - 1.06, 0.036), (0, 0, 0.018), mat="Rug", bevel=0.008, segments=1)
     # medaglione centrale a rombo e motivi agli angoli
     def diamond(name, cx, cy, sx, sy, z, mat):
         o = k.extrude_outline(name, [(sx, 0), (0, sy), (-sx, 0), (0, -sy)], 0.004, loc=(cx, cy, z), rot=(90, 0, 0), mat=mat, bevel=0.002)

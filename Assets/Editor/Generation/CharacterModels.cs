@@ -125,7 +125,7 @@ namespace Elfshift.EditorTools
                 // Posa: la muffola sta in basso ai lati dello schermo, l'avambraccio sale dall'angolo in basso
                 // verso l'interno e in avanti, e il dorso della mano guarda la telecamera (come nei giochi in prima persona).
                 // Il palmo è ruotato un po' verso il centro (pollice in alto e verso l'interno).
-                Vector3 mittenPos = new Vector3(side * 0.34f, -0.27f, 0.6f);
+                Vector3 mittenPos = new Vector3(side * 0.35f, -0.29f, 0.62f);
                 Vector3 forearm = new Vector3(-side * 0.3f, 0.55f, 0.78f).normalized;
                 Quaternion pose = BasisRotation(forearm, mittenPos.normalized + new Vector3(-side * 0.5f, 0f, 0f));
                 Vector3 armPos = mittenPos - pose * new Vector3(0f, MittenCenter, 0f);
@@ -134,7 +134,7 @@ namespace Elfshift.EditorTools
                 MeshRenderer r = arm.GetComponent<MeshRenderer>();
                 if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
-            return ModelKit.Empty(root, "HandSocketFP", new Vector3(0.0f, -0.3f, 0.62f), new Vector3(0f, 0f, 0f));
+            return ModelKit.Empty(root, "HandSocketFP", new Vector3(0.0f, -0.4f, 0.68f), new Vector3(0f, 0f, 0f));
         }
 
         /// <summary>Altezza (lungo il braccio) del centro della muffola nel modello Char_FPArm.</summary>
