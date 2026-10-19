@@ -3,6 +3,7 @@
     "rootNamespace": "Elfshift.EditorTools",
     "references": [
         "Elfshift.Runtime",
+        "Unity.InputSystem",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime",
         "UnityEngine.UI"

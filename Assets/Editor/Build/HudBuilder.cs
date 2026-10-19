@@ -340,7 +340,8 @@ namespace Elfshift.EditorTools
             label.rectTransform.offsetMin = new Vector2(92f, 10f);
             label.rectTransform.offsetMax = new Vector2(-8f, -34f);
 
-            CarriedItemView view = panel.gameObject.AddComponent<CarriedItemView>();
+            // Il componente sta su un oggetto SEMPRE attivo (il Safe Area): se stesse sul riquadro disattivato non si accenderebbe mai.
+            CarriedItemView view = parent.gameObject.AddComponent<CarriedItemView>();
             Wire.Ref(view, "carrier", src.Carrier);
             Wire.Ref(view, "icons", src.Icons);
             Wire.Ref(view, "root", panel.gameObject);

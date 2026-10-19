@@ -37,13 +37,13 @@ namespace Elfshift.Core
         private void Awake()
         {
             moveAction = new InputAction("Move", InputActionType.Value, expectedControlType: "Vector2");
-            // "mode=2" = digitale normalizzato: la diagonale non è più veloce.
-            moveAction.AddCompositeBinding("2DVector(mode=2)")
+            // Composito predefinito = digitale normalizzato: in diagonale non si va più veloci.
+            moveAction.AddCompositeBinding("2DVector")
                 .With("Up", "<Keyboard>/w")
                 .With("Down", "<Keyboard>/s")
                 .With("Left", "<Keyboard>/a")
                 .With("Right", "<Keyboard>/d");
-            moveAction.AddCompositeBinding("2DVector(mode=2)")
+            moveAction.AddCompositeBinding("2DVector")
                 .With("Up", "<Keyboard>/upArrow")
                 .With("Down", "<Keyboard>/downArrow")
                 .With("Left", "<Keyboard>/leftArrow")

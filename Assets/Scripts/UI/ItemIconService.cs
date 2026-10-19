@@ -28,6 +28,7 @@ namespace Elfshift.UI
         /// <summary>Restituisce la texture dell'icona (creandola la prima volta). Null se non possibile.</summary>
         public Texture GetIcon(ItemDefinition item)
         {
+            if (studioCamera == null) BuildStudio(); // sicurezza se chiamato prima di Awake
             if (item == null || item.VisualPrefab == null || studioCamera == null) return null;
 
             RenderTexture existing;

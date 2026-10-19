@@ -40,7 +40,7 @@ namespace Elfshift.Production
             if (item == null) return null;
             Transform origin = spawnOrigin != null ? spawnOrigin : transform;
             WorldItem created = WorldItem.Create(item, origin.position, origin.rotation);
-            if (created != null && created.isActiveAndEnabled && bounceTarget != null)
+            if (created != null && isActiveAndEnabled && bounceTarget != null)
             {
                 if (bounceRoutine != null) StopCoroutine(bounceRoutine);
                 bounceRoutine = StartCoroutine(BounceRoutine());
