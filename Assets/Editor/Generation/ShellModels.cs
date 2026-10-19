@@ -63,20 +63,36 @@ namespace Elfshift.EditorTools
             // ---- Zoccolo e rifiniture in legno, travi e cappelli di neve ----------------------------
             MeshBuilder wood = new MeshBuilder();
             float inner = 0.06f;
-            // zoccolo + cimasa su pareti di fondo, frontale e sinistra
-            wood.Box("WoodMid", new Vector3(0f, 0.6f, HalfDepth - inner / 2f + 0.01f), new Vector3(HalfWidth * 2f, 1.2f, inner), 0.015f);
-            wood.Box("WoodDark", new Vector3(0f, 1.22f, HalfDepth - 0.05f), new Vector3(HalfWidth * 2f, 0.08f, 0.1f), 0.02f);
-            wood.Box("WoodMid", new Vector3(0f, 0.6f, -HalfDepth + inner / 2f - 0.01f), new Vector3(HalfWidth * 2f, 1.2f, inner), 0.015f);
-            wood.Box("WoodDark", new Vector3(0f, 1.22f, -HalfDepth + 0.05f), new Vector3(HalfWidth * 2f, 0.08f, 0.1f), 0.02f);
-            wood.Box("WoodMid", new Vector3(-HalfWidth + inner / 2f - 0.01f, 0.6f, 0f), new Vector3(inner, 1.2f, HalfDepth * 2f), 0.015f);
-            wood.Box("WoodDark", new Vector3(-HalfWidth + 0.05f, 1.22f, 0f), new Vector3(0.1f, 0.08f, HalfDepth * 2f), 0.02f);
-            // zoccolo sul lato destro (interrotto dalla porta)
-            float rightSeg = HalfDepth - DoorHalfWidth;
-            for (int s = -1; s <= 1; s += 2)
+            // Boiserie a pannelli: modulo scolpito in Blender ripetuto lungo le pareti (Tools/Blender/models/shell.py).
+            // Se il file manca uso le tavole semplici di prima.
+            bool fancyWood = ImportedMesh.Exists("Shell_Wainscot");
+            if (fancyWood)
             {
-                float cz = s * (DoorHalfWidth + rightSeg / 2f);
-                wood.Box("WoodMid", new Vector3(HalfWidth - inner / 2f + 0.01f, 0.6f, cz), new Vector3(inner, 1.2f, rightSeg), 0.015f);
-                wood.Box("WoodDark", new Vector3(HalfWidth - 0.05f, 1.22f, cz), new Vector3(0.1f, 0.08f, rightSeg), 0.02f);
+                MeshBuilder wainscot = new MeshBuilder();
+                AddWainscotRun(wainscot, new Vector3(-HalfWidth, 0f, HalfDepth), new Vector3(HalfWidth, 0f, HalfDepth), 180f);
+                AddWainscotRun(wainscot, new Vector3(-HalfWidth, 0f, -HalfDepth), new Vector3(HalfWidth, 0f, -HalfDepth), 0f);
+                AddWainscotRun(wainscot, new Vector3(-HalfWidth, 0f, -HalfDepth), new Vector3(-HalfWidth, 0f, HalfDepth), 90f);
+                AddWainscotRun(wainscot, new Vector3(HalfWidth, 0f, DoorHalfWidth), new Vector3(HalfWidth, 0f, HalfDepth), -90f);
+                AddWainscotRun(wainscot, new Vector3(HalfWidth, 0f, -HalfDepth), new Vector3(HalfWidth, 0f, -DoorHalfWidth), -90f);
+                ModelKit.Part(root, "Wainscot", wainscot);
+            }
+            else
+            {
+                // zoccolo + cimasa su pareti di fondo, frontale e sinistra
+                wood.Box("WoodMid", new Vector3(0f, 0.6f, HalfDepth - inner / 2f + 0.01f), new Vector3(HalfWidth * 2f, 1.2f, inner), 0.015f);
+                wood.Box("WoodDark", new Vector3(0f, 1.22f, HalfDepth - 0.05f), new Vector3(HalfWidth * 2f, 0.08f, 0.1f), 0.02f);
+                wood.Box("WoodMid", new Vector3(0f, 0.6f, -HalfDepth + inner / 2f - 0.01f), new Vector3(HalfWidth * 2f, 1.2f, inner), 0.015f);
+                wood.Box("WoodDark", new Vector3(0f, 1.22f, -HalfDepth + 0.05f), new Vector3(HalfWidth * 2f, 0.08f, 0.1f), 0.02f);
+                wood.Box("WoodMid", new Vector3(-HalfWidth + inner / 2f - 0.01f, 0.6f, 0f), new Vector3(inner, 1.2f, HalfDepth * 2f), 0.015f);
+                wood.Box("WoodDark", new Vector3(-HalfWidth + 0.05f, 1.22f, 0f), new Vector3(0.1f, 0.08f, HalfDepth * 2f), 0.02f);
+                // zoccolo sul lato destro (interrotto dalla porta)
+                float rightSeg = HalfDepth - DoorHalfWidth;
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    float cz = s * (DoorHalfWidth + rightSeg / 2f);
+                    wood.Box("WoodMid", new Vector3(HalfWidth - inner / 2f + 0.01f, 0.6f, cz), new Vector3(inner, 1.2f, rightSeg), 0.015f);
+                    wood.Box("WoodDark", new Vector3(HalfWidth - 0.05f, 1.22f, cz), new Vector3(0.1f, 0.08f, rightSeg), 0.02f);
+                }
             }
             // travi verticali agli angoli, lungo le pareti e ai lati della porta
             float[][] posts =
@@ -88,8 +104,21 @@ namespace Elfshift.EditorTools
                 new[] { -2.7f, HalfDepth - 0.15f }, new[] { 3.3f, HalfDepth - 0.15f }, new[] { -7.8f, HalfDepth - 0.15f },
                 new[] { -2.7f, -HalfDepth + 0.15f }, new[] { 3.3f, -HalfDepth + 0.15f }, new[] { -7.8f, -HalfDepth + 0.15f },
             };
+            bool fancyPosts = ImportedMesh.Exists("Shell_Post");
             for (int i = 0; i < posts.Length; i++)
-                wood.Box("WoodDark", new Vector3(posts[i][0], WallHeight / 2f, posts[i][1]), new Vector3(0.3f, WallHeight, 0.3f), 0.03f);
+            {
+                if (fancyPosts)
+                {
+                    // pilastro con basamento e saette lungo la parete a cui è appoggiato
+                    float px = posts[i][0], pz = posts[i][1];
+                    float yaw = Mathf.Abs(pz) > HalfDepth - 0.5f ? (pz > 0f ? 180f : 0f) : (px < 0f ? 90f : -90f);
+                    wood.Import("Shell_Post", new Vector3(px, 0f, pz), new Vector3(0f, yaw, 0f));
+                }
+                else
+                {
+                    wood.Box("WoodDark", new Vector3(posts[i][0], WallHeight / 2f, posts[i][1]), new Vector3(0.3f, WallHeight, 0.3f), 0.03f);
+                }
+            }
             // trave sopra la porta
             wood.Box("WoodDark", new Vector3(HalfWidth - 0.1f, DoorHeight - 0.05f, 0f), new Vector3(0.28f, 0.24f, DoorHalfWidth * 2f + 0.5f), 0.03f);
             // cornicione in alto con neve
@@ -120,10 +149,32 @@ namespace Elfshift.EditorTools
             if (ceilingRenderer != null) ceilingRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             MeshBuilder beams = new MeshBuilder();
             float[] beamZ = { -7.5f, -2.5f, 2.5f, 7.5f };
+            bool fancyBeams = ImportedMesh.Exists("Shell_Beam");
             for (int i = 0; i < beamZ.Length; i++)
-                beams.Box("WoodDark", new Vector3(0f, WallHeight - 0.15f, beamZ[i]), new Vector3(HalfWidth * 2f, 0.3f, 0.4f), 0.04f);
+            {
+                if (!fancyBeams)
+                {
+                    beams.Box("WoodDark", new Vector3(0f, WallHeight - 0.15f, beamZ[i]), new Vector3(HalfWidth * 2f, 0.3f, 0.4f), 0.04f);
+                    continue;
+                }
+                // 7 tronchi da 4 m, ognuno leggermente diverso (sembrano squadrati a mano)
+                for (int k = 0; k < 7; k++)
+                {
+                    float wobble = ((i * 7 + k) % 3 - 1) * 0.6f;
+                    beams.Import("Shell_Beam", MeshBuilder.Xf(new Vector3(-12f + k * 4f, WallHeight - 0.15f, beamZ[i]), new Vector3(wobble, (k % 2) * 180f, 0f), Vector3.one));
+                }
+            }
             for (int i = 0; i < 8; i++)
-                beams.Box("WoodDark", new Vector3(-12.25f + i * 3.5f, WallHeight - 0.11f, 0f), new Vector3(0.34f, 0.22f, HalfDepth * 2f), 0.04f);
+            {
+                float x = -12.25f + i * 3.5f;
+                if (!fancyBeams)
+                {
+                    beams.Box("WoodDark", new Vector3(x, WallHeight - 0.11f, 0f), new Vector3(0.34f, 0.22f, HalfDepth * 2f), 0.04f);
+                    continue;
+                }
+                for (int k = 0; k < 5; k++)
+                    beams.Import("Shell_Beam", MeshBuilder.Xf(new Vector3(x, WallHeight - 0.11f, -8f + k * 4f), new Vector3(0f, 90f + (k % 2) * 180f, 0f), new Vector3(1f, 0.73f, 0.85f)));
+            }
             GameObject beamObject = ModelKit.Part(root, "CeilingBeams", beams);
             MeshRenderer beamRenderer = beamObject.GetComponent<MeshRenderer>();
             if (beamRenderer != null) beamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -159,6 +210,19 @@ namespace Elfshift.EditorTools
             AddWall(colliders.transform, new Vector3(dockCenterX, 0.6f, -DockHalfDepth), new Vector3(DockLength + 0.4f, 1.2f, 0.25f));
             AddWall(colliders.transform, new Vector3(HalfWidth + DockLength + 0.3f, 0.6f, 0f), new Vector3(0.25f, 1.2f, DockHalfDepth * 2f));
             return root.gameObject;
+        }
+
+        /// <summary>Ripete il modulo di boiserie (largo 1 m) da "from" a "to", stirandolo un poco per riempire esattamente il tratto.</summary>
+        private static void AddWainscotRun(MeshBuilder b, Vector3 from, Vector3 to, float yaw)
+        {
+            float length = Vector3.Distance(from, to);
+            int count = Mathf.Max(1, Mathf.CeilToInt(length - 0.01f));
+            float stretch = length / count;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 pos = Vector3.Lerp(from, to, (i + 0.5f) / count);
+                b.Import("Shell_Wainscot", MeshBuilder.Xf(pos, new Vector3(0f, yaw, 0f), new Vector3(stretch, 1f, 1f)));
+            }
         }
 
         /// <summary>Parete lunga con aperture per le finestre (z = centro della parete).</summary>

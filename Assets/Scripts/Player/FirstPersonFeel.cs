@@ -16,13 +16,13 @@ namespace Elfshift.Player
         [SerializeField] private Transform hands;
 
         [Header("Campo visivo")]
-        [Min(0f)] [SerializeField] private float sprintFovBoost = 10f;
+        [Min(0f)] [SerializeField] private float sprintFovBoost = 6f;
         [Min(0.1f)] [SerializeField] private float fovSpeed = 7f;
 
         [Header("Passi")]
-        [Min(0f)] [SerializeField] private float bobHeight = 0.045f;
-        [Min(0f)] [SerializeField] private float bobSide = 0.03f;
-        [Min(0f)] [SerializeField] private float rollDegrees = 2.2f;
+        [Min(0f)] [SerializeField] private float bobHeight = 0.03f;
+        [Min(0f)] [SerializeField] private float bobSide = 0.018f;
+        [Min(0f)] [SerializeField] private float rollDegrees = 0.8f;
 
         private Vector3 baseCameraPosition;
         private Vector3 baseHandsPosition;
@@ -50,7 +50,7 @@ namespace Elfshift.Player
             Vector3 velocity = player.PlanarVelocity;
             float speed01 = player.WalkSpeed > 0f ? Mathf.Clamp01(velocity.magnitude / (player.WalkSpeed * 1.7f)) : 0f;
             bool moving = player.IsGrounded && velocity.magnitude > 0.3f;
-            bobAmount = Mathf.MoveTowards(bobAmount, moving ? 1f : 0f, dt * 6f);
+            bobAmount = Mathf.MoveTowards(bobAmount, moving ? 1f : 0f, dt * 10f);
             float sprintFactor = player.IsSprinting ? 1.35f : 1f;
             phase += dt * Mathf.Lerp(6f, 12f, speed01) * (moving ? 1f : 0f) * sprintFactor;
 
@@ -58,7 +58,7 @@ namespace Elfshift.Player
             float bobX = Mathf.Sin(phase) * bobSide * bobAmount * sprintFactor;
 
             // Atterraggio: la telecamera si abbassa di scatto e torna su con una molla.
-            if (!wasGrounded && player.IsGrounded) landVelocity = -2.4f;
+            if (!wasGrounded && player.IsGrounded) landVelocity = -1.6f;
             wasGrounded = player.IsGrounded;
             landVelocity += (-landDip * 90f - landVelocity * 12f) * dt;
             landDip += landVelocity * dt;
@@ -70,7 +70,7 @@ namespace Elfshift.Player
             // Inclinazione laterale: ci si "appoggia" nella direzione del movimento di lato.
             float lateral = Vector3.Dot(velocity, player.transform.right);
             float targetRoll = -Mathf.Clamp(lateral / Mathf.Max(0.1f, player.WalkSpeed), -1.5f, 1.5f) * rollDegrees;
-            roll = Mathf.Lerp(roll, targetRoll, 1f - Mathf.Exp(-10f * dt));
+            roll = Mathf.Lerp(roll, targetRoll, 1f - Mathf.Exp(-14f * dt));
             if (look != null) look.Roll = roll;
 
             if (cam != null)

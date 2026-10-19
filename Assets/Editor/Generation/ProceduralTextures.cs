@@ -236,6 +236,132 @@ namespace Elfshift.EditorTools
             return best;
         }
 
+        // ------------------------------------------------------------------ Stile morbido per l'interfaccia
+        /// <summary>
+        /// Pannello morbido con ombra sfumata "cotta" nello sprite: rettangolo bianco ad angoli tondi (colorabile con
+        /// Image.color) e sotto un'ombra leggera e diffusa. Niente contorni: stile pulito da gioco "cozy".
+        /// Il pannello occupa lo sprite tranne un margine di "pad" pixel (dove c'è l'ombra): chi lo usa deve
+        /// allargare l'immagine di <see cref="SoftPanelPad"/> per lato (vedi HudBuilder).
+        /// </summary>
+        public static Texture2D SoftPanel(int size = 128, float radius = 24f, float pad = 16f, float shadowOffset = 5f, float blur = 9f, float shadowAlpha = 0.26f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float half = size * 0.5f;
+            float panelHalf = half - pad;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float fx = x + 0.5f, fy = y + 0.5f;
+                    float d = PanelDistance(fx, fy, half, half, panelHalf, panelHalf, radius);
+                    float panelA = Mathf.Clamp01(0.5f - d);
+                    // ombra: stesso rettangolo spostato in basso, con bordo sfumato
+                    float ds = PanelDistance(fx, fy + shadowOffset, half, half, panelHalf, panelHalf, radius);
+                    float shadowA = shadowAlpha * (1f - Smooth(-blur * 0.5f, blur, ds));
+                    // composizione: pannello bianco sopra l'ombra scura
+                    float a = panelA + shadowA * (1f - panelA);
+                    float c = a > 0.0001f ? panelA / a : 0f;
+                    Color shadowColor = new Color(0.16f, 0.1f, 0.08f);
+                    Color col = Color.Lerp(shadowColor, Color.white, c);
+                    col.a = a;
+                    px[y * size + x] = col;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Come smoothstep degli shader: 0 prima di a, 1 dopo b, curva morbida in mezzo.</summary>
+        private static float Smooth(float a, float b, float x)
+        {
+            float t = Mathf.Clamp01((x - a) / (b - a));
+            return t * t * (3f - 2f * t);
+        }
+
+        /// <summary>Margine (pixel dello sprite) attorno al pannello di <see cref="SoftPanel"/>.</summary>
+        public const float SoftPanelPad = 16f;
+
+        private static float PanelDistance(float px, float py, float cx, float cy, float halfW, float halfH, float radius)
+        {
+            float qx = Mathf.Abs(px - cx) - (halfW - radius);
+            float qy = Mathf.Abs(py - cy) - (halfH - radius);
+            float ox = Mathf.Max(qx, 0f), oy = Mathf.Max(qy, 0f);
+            return Mathf.Sqrt(ox * ox + oy * oy) + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+        }
+
+        /// <summary>Tasto della tastiera visto di fronte: faccia chiara e bordo inferiore più scuro (effetto 3D leggero).</summary>
+        public static Texture2D Keycap(int size = 64, float radius = 14f, float depth = 5f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float half = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float fx = x + 0.5f, fy = y + 0.5f;
+                    float body = PanelDistance(fx, fy, half, half, half - 1f, half - 1f, radius);
+                    float top = PanelDistance(fx, fy, half, half + depth * 0.5f, half - 1f, half - 1f - depth * 0.5f, radius);
+                    float a = Mathf.Clamp01(0.5f - body);
+                    float topMix = Mathf.Clamp01(0.5f - top);
+                    float shade = Mathf.Lerp(0.74f, 1f, topMix);
+                    px[y * size + x] = new Color(shade, shade, shade, a);
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Cerchio pieno bianco con bordo liscio (antialiasing).</summary>
+        public static Texture2D Disc(int size = 64)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float c = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x + 0.5f - c) * (x + 0.5f - c) + (y + 0.5f - c) * (y + 0.5f - c)) - (c - 1f);
+                    px[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(0.5f - d));
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Cerchio bianco con ombra morbida sotto (per i distintivi delle icone).</summary>
+        public static Texture2D SoftDisc(int size = 128, float pad = 14f, float shadowOffset = 5f, float blur = 8f, float shadowAlpha = 0.25f)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] px = new Color[size * size];
+            float c = size * 0.5f;
+            float r = c - pad;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float fx = x + 0.5f - c, fy = y + 0.5f - c;
+                    float d = Mathf.Sqrt(fx * fx + fy * fy) - r;
+                    float ds = Mathf.Sqrt(fx * fx + (fy + shadowOffset) * (fy + shadowOffset)) - r;
+                    float panelA = Mathf.Clamp01(0.5f - d);
+                    float shadowA = shadowAlpha * (1f - Smooth(-blur * 0.5f, blur, ds));
+                    float a = panelA + shadowA * (1f - panelA);
+                    float k = a > 0.0001f ? panelA / a : 0f;
+                    Color col = Color.Lerp(new Color(0.16f, 0.1f, 0.08f), Color.white, k);
+                    col.a = a;
+                    px[y * size + x] = col;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
         // ------------------------------------------------------------------ Stile cartoon per l'interfaccia
         /// <summary>Marrone scuro caldo usato per tutti i contorni dell'interfaccia.</summary>
         public static readonly Color InkColor = new Color(0.23f, 0.15f, 0.13f, 1f);

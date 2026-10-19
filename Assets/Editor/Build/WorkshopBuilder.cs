@@ -54,12 +54,15 @@ namespace Elfshift.EditorTools
                 EffectsBuilder.ApplyQualitySettings();
 
                 Step("Texture e materiali...", 0.08f);
-                Texture2D planks = SaveTexture(ProceduralTextures.WoodPlanks(512), AssetUtil.GeneratedTextures + "/floor_planks.png");
+                // Texture "dipinte" del progetto (Tools/Textures/make_textures.py); se mancano le genero al volo.
+                Texture2D planks = LoadSourceTexture("Assets/Textures/Source/floor_planks.png");
+                if (planks == null) planks = SaveTexture(ProceduralTextures.WoodPlanks(512), AssetUtil.GeneratedTextures + "/floor_planks.png");
                 Material floorMat = MaterialLibrary.GetTextured("FloorPlanks", planks, Vector2.one, 0.3f);
                 Material dockMat = MaterialLibrary.GetTextured("DockPlanks", planks, Vector2.one, 0.2f);
                 dockMat.SetColor("_BaseColor", new Color(0.8f, 0.84f, 0.95f));
                 dockMat.SetColor("_Color", new Color(0.8f, 0.84f, 0.95f));
-                Texture2D stripes = SaveTexture(ProceduralTextures.WallStripes(512), AssetUtil.GeneratedTextures + "/wallpaper.png");
+                Texture2D stripes = LoadSourceTexture("Assets/Textures/Source/wallpaper.png");
+                if (stripes == null) stripes = SaveTexture(ProceduralTextures.WallStripes(512), AssetUtil.GeneratedTextures + "/wallpaper.png");
                 Material wallMat = MaterialLibrary.GetTextured("Wallpaper", stripes, Vector2.one, 0.1f);
                 Texture2D soft = SaveTexture(ProceduralTextures.SoftCircle(64), AssetUtil.GeneratedTextures + "/soft_circle.png");
                 particleMaterial = EffectsBuilder.ParticleMaterial(soft);
@@ -169,8 +172,25 @@ namespace Elfshift.EditorTools
             AssetUtil.EnsureFolder(AssetUtil.GeneratedPrefabs + "/Stations");
             MaterialLibrary.ClearCache();
             MaterialLibrary.ClearShaderCache();
+            ImportedMesh.ClearCache();
             BulbRenderers.Clear();
             BulbColors.Clear();
+        }
+
+        /// <summary>Carica una texture già presente nel progetto, impostandola per ripetersi (pavimenti, pareti).</summary>
+        private static Texture2D LoadSourceTexture(string path)
+        {
+            if (!System.IO.File.Exists(path)) return null;
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && (importer.wrapMode != TextureWrapMode.Repeat || !importer.mipmapEnabled))
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.mipmapEnabled = true;
+                importer.sRGBTexture = true;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         private static Texture2D SaveTexture(Texture2D texture, string path)

@@ -110,16 +110,72 @@ namespace Elfshift.EditorTools
             for (int side = -1; side <= 1; side += 2)
             {
                 MeshBuilder mb = new MeshBuilder();
-                // manica verde che sale dal basso, polsino bianco e mano (guanto color pelle)
-                mb.Taper("GreenElf", new Vector3(0f, 0f, 0f), 0.075f, 0.095f, 0.5f, 0.04f, Vector3.zero, 14);
-                mb.Ring("White", new Vector3(0f, 0.5f, 0f), 0.082f, 0.024f, Vector3.zero, 14, 6);
-                mb.Ball("Skin", new Vector3(0f, 0.57f, 0f), 0.085f, new Vector3(1f, 1.1f, 0.9f), Vector3.zero, 12);
-                GameObject arm = ModelKit.Part(root, side < 0 ? "HandLeft" : "HandRight", mb,
-                    new Vector3(side * 0.34f, -0.42f, 0.16f), new Vector3(78f, side * 14f, side * -6f));
+                // Braccio modellato in Blender (manica a campana, polsino di pelliccia, muffola a maglia con pollice).
+                // Il file contiene il braccio destro: per il sinistro lo specchiamo sull'asse X.
+                Matrix4x4 mirror = MeshBuilder.Xf(Vector3.zero, Vector3.zero, new Vector3(side < 0 ? -1f : 1f, 1f, 1f));
+                bool imported = mb.Import("Char_FPArm", mirror);
+                if (!imported)
+                {
+                    // forma di riserva: manica verde, polsino bianco e mano (guanto color pelle)
+                    mb.Taper("GreenElf", new Vector3(0f, 0f, 0f), 0.075f, 0.095f, 0.5f, 0.04f, Vector3.zero, 14);
+                    mb.Ring("White", new Vector3(0f, 0.5f, 0f), 0.082f, 0.024f, Vector3.zero, 14, 6);
+                    mb.Ball("Skin", new Vector3(0f, 0.57f, 0f), 0.085f, new Vector3(1f, 1.1f, 0.9f), Vector3.zero, 12);
+                }
+
+                // Posa: la muffola sta in basso ai lati dello schermo, l'avambraccio sale dall'angolo in basso
+                // verso l'interno e in avanti, e il dorso della mano guarda la telecamera (come nei giochi in prima persona).
+                // Il palmo è ruotato un po' verso il centro (pollice in alto e verso l'interno).
+                Vector3 mittenPos = new Vector3(side * 0.34f, -0.27f, 0.6f);
+                Vector3 forearm = new Vector3(-side * 0.3f, 0.55f, 0.78f).normalized;
+                Quaternion pose = BasisRotation(forearm, mittenPos.normalized + new Vector3(-side * 0.5f, 0f, 0f));
+                Vector3 armPos = mittenPos - pose * new Vector3(0f, MittenCenter, 0f);
+                GameObject arm = ModelKit.Part(root, side < 0 ? "HandLeft" : "HandRight", mb, armPos, Vector3.zero);
+                arm.transform.localRotation = pose;
                 MeshRenderer r = arm.GetComponent<MeshRenderer>();
                 if (r != null) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
             return ModelKit.Empty(root, "HandSocketFP", new Vector3(0.0f, -0.3f, 0.62f), new Vector3(0f, 0f, 0f));
+        }
+
+        /// <summary>Altezza (lungo il braccio) del centro della muffola nel modello Char_FPArm.</summary>
+        private const float MittenCenter = 0.56f;
+
+        /// <summary>
+        /// Rotazione che porta l'asse Y locale su "yAxis" e l'asse Z locale il più vicino possibile a "zHint"
+        /// (costruita a mano dalla base ortonormale, senza Quaternion.LookRotation).
+        /// </summary>
+        private static Quaternion BasisRotation(Vector3 yAxis, Vector3 zHint)
+        {
+            Vector3 y = yAxis.normalized;
+            Vector3 z = (zHint - y * Vector3.Dot(zHint, y)).normalized;
+            Vector3 x = Vector3.Cross(y, z);
+            // matrice di rotazione con colonne x, y, z -> quaternione
+            float m00 = x.x, m01 = y.x, m02 = z.x;
+            float m10 = x.y, m11 = y.y, m12 = z.y;
+            float m20 = x.z, m21 = y.z, m22 = z.z;
+            float trace = m00 + m11 + m22;
+            float qw, qx, qy, qz;
+            if (trace > 0f)
+            {
+                float s = Mathf.Sqrt(trace + 1f) * 2f;
+                qw = 0.25f * s; qx = (m21 - m12) / s; qy = (m02 - m20) / s; qz = (m10 - m01) / s;
+            }
+            else if (m00 > m11 && m00 > m22)
+            {
+                float s = Mathf.Sqrt(1f + m00 - m11 - m22) * 2f;
+                qw = (m21 - m12) / s; qx = 0.25f * s; qy = (m01 + m10) / s; qz = (m02 + m20) / s;
+            }
+            else if (m11 > m22)
+            {
+                float s = Mathf.Sqrt(1f + m11 - m00 - m22) * 2f;
+                qw = (m02 - m20) / s; qx = (m01 + m10) / s; qy = 0.25f * s; qz = (m12 + m21) / s;
+            }
+            else
+            {
+                float s = Mathf.Sqrt(1f + m22 - m00 - m11) * 2f;
+                qw = (m10 - m01) / s; qx = (m02 + m20) / s; qy = (m12 + m21) / s; qz = 0.25f * s;
+            }
+            return new Quaternion(qx, qy, qz, qw);
         }
 
         private static Transform BuildLeg(Transform root, string name, float x)

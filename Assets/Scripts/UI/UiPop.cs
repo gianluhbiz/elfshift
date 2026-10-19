@@ -3,14 +3,14 @@ using UnityEngine;
 namespace Elfshift.UI
 {
     /// <summary>
-    /// Fa "saltare fuori" un elemento dell'interfaccia quando compare (scala elastica) e permette
+    /// Fa "saltare fuori" un elemento dell'interfaccia quando compare (piccolo rimbalzo morbido) e permette
     /// piccoli "colpetti" (Punch) per dare risalto, per esempio quando un numero aumenta.
     /// </summary>
     public sealed class UiPop : MonoBehaviour
     {
-        [Min(0.05f)] [SerializeField] private float duration = 0.5f;
+        [Min(0.05f)] [SerializeField] private float duration = 0.35f;
         [Min(0f)] [SerializeField] private float delay = 0f;
-        [Range(0f, 1f)] [SerializeField] private float startScale = 0.25f;
+        [Range(0f, 1f)] [SerializeField] private float startScale = 0.6f;
         [Tooltip("Se vero parte da solo quando l'oggetto si attiva.")]
         [SerializeField] private bool playOnEnable = true;
 
@@ -47,7 +47,7 @@ namespace Elfshift.UI
                 else
                 {
                     float k = time / duration;
-                    baseScale = k >= 1f ? 1f : Mathf.LerpUnclamped(startScale, 1f, UiAnim.ElasticOut(k));
+                    baseScale = k >= 1f ? 1f : Mathf.LerpUnclamped(startScale, 1f, UiAnim.BackOut(k, 2.2f));
                     if (k >= 1f) time = 9999f;
                 }
             }

@@ -9,8 +9,8 @@ namespace Elfshift.UI
 {
     /// <summary>
     /// La "letterina" mostrata in alto: icona del giocattolo, nome, bambino e barra del tempo.
-    /// Entra con un rimbalzo, dondola piano, trema quando il tempo sta per finire e,
-    /// alla consegna, fa festa (timbro "OK!") prima di volare via.
+    /// Scende con un piccolo rimbalzo, respira piano quando il tempo sta per finire e,
+    /// alla consegna, mostra il timbro "Consegnato!" prima di volare via.
     /// Tutta la grafica sta nel figlio "Visual", così il layout non interferisce con le animazioni.
     /// </summary>
     public sealed class OrderCardView : MonoBehaviour
@@ -27,12 +27,14 @@ namespace Elfshift.UI
         [SerializeField] private RectTransform stamp;
         [SerializeField] private Text stampText;
 
-        private static readonly Color Calm = new Color(0.42f, 0.85f, 0.45f);
-        private static readonly Color Warning = new Color(1f, 0.78f, 0.25f);
-        private static readonly Color Danger = new Color(0.95f, 0.3f, 0.3f);
-        private static readonly Color PaperColor = new Color(1f, 0.95f, 0.8f);
-        private static readonly Color DoneColor = new Color(0.62f, 0.93f, 0.55f);
-        private static readonly Color FailColor = new Color(1f, 0.55f, 0.5f);
+        // Colori tenui, in tinta con il resto dell'interfaccia (carta calda, inchiostro marrone).
+        private static readonly Color Calm = new Color(0.49f, 0.73f, 0.43f);
+        private static readonly Color Warning = new Color(0.91f, 0.66f, 0.23f);
+        private static readonly Color Danger = new Color(0.85f, 0.34f, 0.31f);
+        private static readonly Color PaperColor = new Color(1f, 0.97f, 0.92f);
+        private static readonly Color DoneColor = new Color(0.89f, 0.95f, 0.85f);
+        private static readonly Color FailColor = new Color(0.98f, 0.86f, 0.84f);
+        private static readonly Color InkSoft = new Color(0.55f, 0.45f, 0.4f);
 
         private Order order;
         private int lastShownSecond = -1;
@@ -69,26 +71,24 @@ namespace Elfshift.UI
             age += Time.unscaledDeltaTime;
             Refresh();
 
-            // Entrata: scende dall'alto con rimbalzo elastico.
-            float enter = UiAnim.ElasticOut(Mathf.Clamp01(age / 0.7f));
-            float yOffset = (1f - enter) * 140f;
-            float scale = Mathf.LerpUnclamped(0.5f, 1f, enter);
+            // Entrata: scende dall'alto e si assesta con un piccolo rimbalzo, comparendo in dissolvenza.
+            float k = Mathf.Clamp01(age / 0.5f);
+            float enter = UiAnim.BackOut(k, 1.4f);
+            float yOffset = (1f - enter) * 60f;
+            float scale = Mathf.LerpUnclamped(0.9f, 1f, enter);
+            if (visualGroup != null) visualGroup.alpha = UiAnim.OutCubic(k);
 
-            // Dondolio leggero e, quando il tempo sta finendo, tremolio nervoso.
+            // Quando il tempo sta per finire la carta "respira" e si tinge appena di rosso.
             float n = order.Normalized;
-            float wobble = Mathf.Sin(Time.unscaledTime * 2f + seed) * 1.4f;
-            float shake = 0f;
+            float rotation = 0f;
             if (n <= 0.25f)
             {
-                shake = Mathf.Sin(Time.unscaledTime * 38f) * 3.5f;
-                wobble += Mathf.Sin(Time.unscaledTime * 24f) * 1.8f;
-                if (background != null)
-                {
-                    float flash = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 9f);
-                    background.color = Color.Lerp(PaperColor, FailColor, flash * 0.55f);
-                }
+                float beat = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f + seed);
+                scale *= 1f + beat * 0.025f;
+                rotation = Mathf.Sin(Time.unscaledTime * 3f + seed) * 0.8f;
+                if (background != null) background.color = Color.Lerp(PaperColor, FailColor, beat * 0.7f);
             }
-            ApplyPose(yOffset, scale, wobble, shake);
+            ApplyPose(yOffset, scale, rotation);
         }
 
         private void ApplyPose(float yOffset, float scale, float rotation = 0f, float xOffset = 0f)
@@ -114,7 +114,7 @@ namespace Elfshift.UI
                 if (timeText != null)
                 {
                     timeText.text = UiText.FormatTime(seconds);
-                    timeText.color = n > 0.25f ? Color.white : new Color(1f, 0.8f, 0.8f);
+                    timeText.color = n > 0.25f ? InkSoft : Danger;
                 }
             }
         }
@@ -141,7 +141,11 @@ namespace Elfshift.UI
             if (stamp != null)
             {
                 stamp.gameObject.SetActive(true);
-                if (stampText != null) stampText.text = success ? "OK!" : "ZZZ";
+                if (stampText != null)
+                {
+                    stampText.text = success ? UiText.StampDone : UiText.StampFail;
+                    stampText.color = success ? Calm : Danger;
+                }
             }
 
             // fase 1: la carta salta (successo) o trema (fallimento)
@@ -151,16 +155,16 @@ namespace Elfshift.UI
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / duration);
-                float stampScale = Mathf.LerpUnclamped(0.2f, 1f, UiAnim.ElasticOut(Mathf.Clamp01(t / 0.45f)));
+                float stampScale = Mathf.LerpUnclamped(1.6f, 1f, UiAnim.OutCubic(Mathf.Clamp01(t / 0.25f)));
                 if (stamp != null) stamp.localScale = Vector3.one * stampScale;
                 if (success)
                 {
-                    float bounce = Mathf.Sin(k * Mathf.PI * 2f) * (1f - k) * 22f;
-                    ApplyPose(Mathf.Max(0f, bounce), 1f + Mathf.Sin(k * Mathf.PI) * 0.18f, Mathf.Sin(k * Mathf.PI * 4f) * (1f - k) * 6f);
+                    float bounce = Mathf.Sin(k * Mathf.PI) * 10f;
+                    ApplyPose(bounce, 1f + Mathf.Sin(k * Mathf.PI) * 0.06f, 0f);
                 }
                 else
                 {
-                    ApplyPose(0f, 1f, Mathf.Sin(t * 50f) * 5f * (1f - k), Mathf.Sin(t * 60f) * 6f * (1f - k));
+                    ApplyPose(0f, 1f, 0f, Mathf.Sin(t * 40f) * 4f * (1f - k));
                 }
                 yield return null;
             }
@@ -172,8 +176,8 @@ namespace Elfshift.UI
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / outDuration);
-                float y = success ? UiAnim.OutCubic(k) * 150f : -UiAnim.OutCubic(k) * 110f;
-                ApplyPose(y, 1f - k * 0.35f, success ? k * 8f : -k * 10f);
+                float y = success ? UiAnim.OutCubic(k) * 70f : -UiAnim.OutCubic(k) * 50f;
+                ApplyPose(y, 1f - k * 0.1f, 0f);
                 if (visualGroup != null) visualGroup.alpha = 1f - k;
                 yield return null;
             }

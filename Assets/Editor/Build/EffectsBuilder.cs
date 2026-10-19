@@ -235,6 +235,67 @@ namespace Elfshift.EditorTools
             SetInt(so, "m_AdditionalLightsPerObjectLimit", 8);
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(asset);
+
+            SerializedProperty list = so.FindProperty("m_RendererDataList");
+            if (list != null && list.isArray && list.arraySize > 0)
+                EnsureAmbientOcclusion(list.GetArrayElementAtIndex(0).objectReferenceValue);
+        }
+
+        /// <summary>
+        /// Aggiunge (una volta sola) l'effetto "Screen Space Ambient Occlusion" di URP al renderer:
+        /// ombre morbide negli angoli, sotto i mobili e fra gli oggetti vicini. Fa sembrare la scena molto più "vera".
+        /// È fatto via reflection perché la classe dell'effetto non è pubblica; se qualcosa non va,
+        /// si limita a scrivere un avviso (il gioco funziona lo stesso, solo senza questo effetto).
+        /// </summary>
+        private static void EnsureAmbientOcclusion(Object rendererData)
+        {
+            if (rendererData == null) return;
+            try
+            {
+                SerializedObject data = new SerializedObject(rendererData);
+                SerializedProperty features = data.FindProperty("m_RendererFeatures");
+                SerializedProperty map = data.FindProperty("m_RendererFeatureMap");
+                if (features == null || map == null) return;
+
+                Object feature = null;
+                for (int i = 0; i < features.arraySize; i++)
+                {
+                    Object f = features.GetArrayElementAtIndex(i).objectReferenceValue;
+                    if (f != null && f.GetType().Name == "ScreenSpaceAmbientOcclusion") { feature = f; break; }
+                }
+
+                if (feature == null)
+                {
+                    System.Type type = typeof(ScriptableRendererFeature).Assembly.GetType("UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion");
+                    if (type == null) { Debug.LogWarning("[Elfshift] SSAO non disponibile in questa versione di URP."); return; }
+                    feature = ScriptableObject.CreateInstance(type);
+                    feature.name = "ScreenSpaceAmbientOcclusion";
+                    AssetDatabase.AddObjectToAsset(feature, rendererData);
+                    string guid;
+                    long localId;
+                    if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(feature, out guid, out localId)) return;
+                    features.arraySize++;
+                    features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = feature;
+                    map.arraySize++;
+                    map.GetArrayElementAtIndex(map.arraySize - 1).longValue = localId;
+                    data.ApplyModifiedPropertiesWithoutUndo();
+                }
+
+                // impostazioni: effetto morbido e ampio, non "sporco"
+                SerializedObject fso = new SerializedObject(feature);
+                SetFloat(fso, "m_Settings.Intensity", 1.1f);
+                SetFloat(fso, "m_Settings.Radius", 0.4f);
+                SetFloat(fso, "m_Settings.DirectLightingStrength", 0.3f);
+                SetInt(fso, "m_Settings.Source", 1);       // profondità + normali (più preciso)
+                SetBool(fso, "m_Settings.Downsample", false);
+                fso.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(feature);
+                EditorUtility.SetDirty(rendererData);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[Elfshift] Non sono riuscito ad attivare l'ombreggiatura SSAO: " + e.Message);
+            }
         }
 
         private static void SetInt(SerializedObject so, string name, int value)

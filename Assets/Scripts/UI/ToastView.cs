@@ -43,7 +43,7 @@ namespace Elfshift.UI
             }
             timer -= Time.unscaledDeltaTime;
             float elapsed = totalTime - timer;
-            float pop = Mathf.LerpUnclamped(0.4f, 1f, UiAnim.ElasticOut(Mathf.Clamp01(elapsed / 0.5f)));
+            float pop = Mathf.LerpUnclamped(0.85f, 1f, UiAnim.BackOut(Mathf.Clamp01(elapsed / 0.35f), 2f));
             float outK = Mathf.Clamp01(1f - timer / 0.3f); // ultimi 0,3 s
             group.alpha = Mathf.Clamp01(elapsed / 0.08f) * (1f - outK);
             transform.localScale = Vector3.one * (pop * (1f - outK * 0.15f));

@@ -4,13 +4,29 @@ using UnityEngine;
 
 namespace Elfshift.EditorTools
 {
-    /// <summary>Giocattoli decorativi, camino, poltrone, lampadario, orologio, festoni: dettagli che rendono vivo il laboratorio.</summary>
+    /// <summary>
+    /// Giocattoli decorativi, camino, poltrone, lampadario, orologio, festoni: dettagli che rendono vivo il laboratorio.
+    /// La forma vera di ogni oggetto è scolpita in Blender (Tools/Blender/models/decor.py, file Assets/Models/Source/Decor_*.bytes);
+    /// se un file manca si usa la vecchia forma semplice costruita qui sotto (riserva).
+    /// </summary>
     public static class DecorModels
     {
+        /// <summary>Aggiunge il modello di Blender se esiste (senza avvisi se manca una variante di colore).</summary>
+        private static bool TryImport(MeshBuilder mb, string model, Vector3 pos, Vector3 euler, float scale)
+        {
+            return ImportedMesh.Exists(model) && mb.Import(model, pos, euler, scale);
+        }
+
+        private static bool TryImport(MeshBuilder mb, string model, Matrix4x4 xf)
+        {
+            return ImportedMesh.Exists(model) && mb.Import(model, xf);
+        }
+
         // ============================================================================ giocattoli (da aggiungere a un MeshBuilder)
         /// <summary>Orsetto di peluche. pos = centro della base; altezza circa 0,6 * scale.</summary>
         public static void AddTeddy(MeshBuilder mb, Vector3 pos, float scale, string fur, float yaw = 0f)
         {
+            if (TryImport(mb, "Decor_Teddy_" + fur, pos, new Vector3(0f, yaw, 0f), scale)) return;
             Quaternion q = Quaternion.Euler(0f, yaw, 0f);
             System.Func<float, float, float, Vector3> P = (x, y, z) => pos + q * (new Vector3(x, y, z) * scale);
             Vector3 e = new Vector3(0f, yaw, 0f);
@@ -34,6 +50,7 @@ namespace Elfshift.EditorTools
         /// <summary>Robot di latta. pos = centro della base; altezza circa 0,62 * scale.</summary>
         public static void AddRobot(MeshBuilder mb, Vector3 pos, float scale, string body, float yaw = 0f)
         {
+            if (TryImport(mb, "Decor_Robot_" + body, pos, new Vector3(0f, yaw, 0f), scale)) return;
             Vector3 e = new Vector3(0f, yaw, 0f);
             Quaternion q = Quaternion.Euler(0f, yaw, 0f);
             System.Func<float, float, float, Vector3> P = (x, y, z) => pos + q * (new Vector3(x, y, z) * scale);
@@ -55,6 +72,7 @@ namespace Elfshift.EditorTools
 
         public static void AddDrum(MeshBuilder mb, Vector3 pos, float scale)
         {
+            if (TryImport(mb, "Decor_Drum", pos, Vector3.zero, scale)) return;
             mb.Cyl("RedSanta", pos, 0.15f * scale, 0.2f * scale, 0.01f, Vector3.zero, 18);
             mb.Cyl("Cream", pos + new Vector3(0f, 0.2f * scale, 0f), 0.15f * scale, 0.012f * scale, 0.004f, Vector3.zero, 18);
             mb.Ring("Gold", pos + new Vector3(0f, 0.01f * scale, 0f), 0.15f * scale, 0.012f * scale, Vector3.zero, 18, 5);
@@ -70,6 +88,7 @@ namespace Elfshift.EditorTools
 
         public static void AddSpinTop(MeshBuilder mb, Vector3 pos, float scale, string color)
         {
+            if (TryImport(mb, "Decor_SpinTop_" + color, pos, Vector3.zero, scale)) return;
             mb.Cone(color, pos, 0.1f * scale, 0.11f * scale, new Vector3(180f, 0f, 0f), 16);
             mb.Cyl("ClothBlue", pos + new Vector3(0f, 0.11f * scale, 0f), 0.1f * scale, 0.045f * scale, 0.012f, Vector3.zero, 16);
             mb.Cyl("Gold", pos + new Vector3(0f, 0.155f * scale, 0f), 0.022f * scale, 0.09f * scale, 0.006f, Vector3.zero, 8);
@@ -77,6 +96,7 @@ namespace Elfshift.EditorTools
 
         public static void AddBlocks(MeshBuilder mb, Vector3 pos, float scale)
         {
+            if (TryImport(mb, "Decor_Blocks", pos, Vector3.zero, scale)) return;
             string[] colors = { "ClothYellow", "ClothBlue", "RedSanta", "GreenElf" };
             float s = 0.11f * scale;
             for (int i = 0; i < 2; i++)
@@ -88,6 +108,8 @@ namespace Elfshift.EditorTools
 
         public static void AddBeachBall(MeshBuilder mb, Vector3 pos, float radius)
         {
+            // il modello di Blender ha raggio 0,16
+            if (TryImport(mb, "Decor_BeachBall", pos, Vector3.zero, radius / 0.16f)) return;
             mb.Ball("ClothPink", pos + new Vector3(0f, radius, 0f), radius, 16);
             mb.Ring("Snow", pos + new Vector3(0f, radius, 0f), radius * 0.99f, radius * 0.16f, Vector3.zero, 18, 6);
             mb.Ring("ClothYellow", pos + new Vector3(0f, radius, 0f), radius * 0.99f, radius * 0.14f, new Vector3(90f, 0f, 0f), 18, 6);
@@ -101,6 +123,57 @@ namespace Elfshift.EditorTools
             Transform root = ModelKit.Empty(parent, "Fireplace", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
 
+            if (TryImport(mb, "Decor_Fireplace", Vector3.zero, Vector3.zero, 1f))
+            {
+                // cappa in intonaco: il modello è alto 2,51 m e viene allungato fino al soffitto
+                float chimney = Mathf.Max(0.1f, ceilingHeight - 2.49f);
+                TryImport(mb, "Decor_FireplaceChimney", MeshBuilder.Xf(new Vector3(0f, 2.49f, 0f), Vector3.zero, new Vector3(1f, chimney / 2.51f, 1f)));
+            }
+            else
+                AddFireplaceFallback(mb, ceilingHeight);
+            ModelKit.Part(root, "Body", mb);
+
+            // fiamme emissive (due oggetti separati: FlameFlicker li fa tremolare)
+            MeshBuilder fire = new MeshBuilder();
+            if (!TryImport(fire, "Decor_FireplaceFlames", Vector3.zero, Vector3.zero, 1f))
+            {
+                fire.Cone("FireOrange", new Vector3(-0.3f, 0.3f, 0.02f), 0.2f, 0.75f, Vector3.zero, 10);
+                fire.Cone("FireOrange", new Vector3(0.28f, 0.3f, -0.02f), 0.18f, 0.62f, Vector3.zero, 10);
+                fire.Cone("FireOrange", new Vector3(0f, 0.38f, 0f), 0.24f, 0.9f, Vector3.zero, 10);
+            }
+            ModelKit.Part(root, "Flames", fire);
+            MeshBuilder inner = new MeshBuilder();
+            if (!TryImport(inner, "Decor_FireplaceFlamesInner", Vector3.zero, Vector3.zero, 1f))
+            {
+                inner.Cone("FireYellow", new Vector3(0f, 0.38f, 0.04f), 0.13f, 0.6f, Vector3.zero, 10);
+                inner.Cone("FireYellow", new Vector3(-0.28f, 0.3f, 0.05f), 0.09f, 0.4f, Vector3.zero, 8);
+            }
+            GameObject innerObject = ModelKit.Part(root, "FlamesInner", inner);
+
+            Transform flamesTransform = root.Find("Flames");
+            FlameFlicker flicker = root.gameObject.AddComponent<FlameFlicker>();
+            flicker.EditorSetup(new[] { flamesTransform, innerObject.transform });
+
+            GameObject lightObject = new GameObject("FireLight");
+            lightObject.transform.SetParent(root, false);
+            lightObject.transform.localPosition = new Vector3(0f, 0.9f, 0.5f);
+            fireLight = lightObject.AddComponent<Light>();
+            fireLight.type = LightType.Point;
+            fireLight.color = new Color(1f, 0.55f, 0.22f);
+            fireLight.intensity = 3.2f;
+            fireLight.range = 12f;
+            fireLight.shadows = LightShadows.None;
+            lightObject.AddComponent<FlickerLight>();
+
+            GameObject col = new GameObject("Collider");
+            col.transform.SetParent(root, false);
+            ModelKit.AddBoxCollider(col, new Vector3(0f, 1.2f, 0.1f), new Vector3(4.0f, 2.4f, 1.3f));
+            return root.gameObject;
+        }
+
+        /// <summary>Forma semplice di riserva del camino (se manca il modello di Blender).</summary>
+        private static void AddFireplaceFallback(MeshBuilder mb, float ceilingHeight)
+        {
             // focolare in pietra e struttura in mattoni
             mb.Box("Stone", new Vector3(0f, 0.08f, 1.05f), new Vector3(4.0f, 0.16f, 1.1f), 0.03f);
             for (int s = -1; s <= 1; s += 2)
@@ -139,38 +212,6 @@ namespace Elfshift.EditorTools
                 mb.Cyl("Cream", new Vector3(s * 1.7f, 2.49f, 0.2f), 0.045f, 0.28f, 0.01f, Vector3.zero, 10);
                 mb.Ball("LampGlow", new Vector3(s * 1.7f, 2.82f, 0.2f), 0.035f, new Vector3(1f, 1.5f, 1f), Vector3.zero, 8);
             }
-            ModelKit.Part(root, "Body", mb);
-
-            // fiamme emissive
-            MeshBuilder fire = new MeshBuilder();
-            fire.Cone("FireOrange", new Vector3(-0.3f, 0.3f, 0.02f), 0.2f, 0.75f, Vector3.zero, 10);
-            fire.Cone("FireOrange", new Vector3(0.28f, 0.3f, -0.02f), 0.18f, 0.62f, Vector3.zero, 10);
-            fire.Cone("FireOrange", new Vector3(0f, 0.38f, 0f), 0.24f, 0.9f, Vector3.zero, 10);
-            ModelKit.Part(root, "Flames", fire);
-            MeshBuilder inner = new MeshBuilder();
-            inner.Cone("FireYellow", new Vector3(0f, 0.38f, 0.04f), 0.13f, 0.6f, Vector3.zero, 10);
-            inner.Cone("FireYellow", new Vector3(-0.28f, 0.3f, 0.05f), 0.09f, 0.4f, Vector3.zero, 8);
-            GameObject innerObject = ModelKit.Part(root, "FlamesInner", inner);
-
-            Transform flamesTransform = root.Find("Flames");
-            FlameFlicker flicker = root.gameObject.AddComponent<FlameFlicker>();
-            flicker.EditorSetup(new[] { flamesTransform, innerObject.transform });
-
-            GameObject lightObject = new GameObject("FireLight");
-            lightObject.transform.SetParent(root, false);
-            lightObject.transform.localPosition = new Vector3(0f, 0.9f, 0.5f);
-            fireLight = lightObject.AddComponent<Light>();
-            fireLight.type = LightType.Point;
-            fireLight.color = new Color(1f, 0.55f, 0.22f);
-            fireLight.intensity = 3.2f;
-            fireLight.range = 12f;
-            fireLight.shadows = LightShadows.None;
-            lightObject.AddComponent<FlickerLight>();
-
-            GameObject col = new GameObject("Collider");
-            col.transform.SetParent(root, false);
-            ModelKit.AddBoxCollider(col, new Vector3(0f, 1.2f, 0.1f), new Vector3(4.0f, 2.4f, 1.3f));
-            return root.gameObject;
         }
 
         // ============================================================================ POLTRONA
@@ -180,6 +221,8 @@ namespace Elfshift.EditorTools
             Transform root = ModelKit.Empty(parent, "Armchair", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
             string dark = fabric == "RedSanta" ? "RedDeep" : "GreenDeep";
+            if (!TryImport(mb, "Decor_Armchair_" + fabric, Vector3.zero, Vector3.zero, 1f))
+            {
             for (int sx = -1; sx <= 1; sx += 2)
                 for (int sz = -1; sz <= 1; sz += 2)
                     mb.Cyl("WoodDark", new Vector3(sx * 0.38f, 0f, sz * 0.34f), 0.05f, 0.16f, 0.015f, Vector3.zero, 8);
@@ -193,6 +236,7 @@ namespace Elfshift.EditorTools
                     mb.Ball("Gold", new Vector3(-0.22f + c * 0.22f, 0.6f + r * 0.2f, -0.19f - r * 0.01f), 0.022f, 6);
             mb.Box("ClothYellow", new Vector3(-0.2f, 0.56f, 0.1f), new Vector3(0.3f, 0.28f, 0.1f), 0.04f, new Vector3(-20f, 15f, 8f));
             mb.Box("GreenElf", new Vector3(0.15f, 0.5f, 0.06f), new Vector3(0.5f, 0.07f, 0.6f), 0.03f, new Vector3(0f, 12f, 0f));
+            }
             ModelKit.Part(root, "Body", mb);
             GameObject col = new GameObject("Collider");
             col.transform.SetParent(root, false);
@@ -205,6 +249,8 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("SideTable");
             Transform root = ModelKit.Empty(parent, "SideTable", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
+            if (!TryImport(mb, "Decor_SideTable", Vector3.zero, Vector3.zero, 1f))
+            {
             mb.Cyl("WoodDark", Vector3.zero, 0.24f, 0.05f, 0.015f, Vector3.zero, 16);
             mb.Cyl("WoodDark", new Vector3(0f, 0.04f, 0f), 0.06f, 0.5f, 0.01f, Vector3.zero, 10);
             mb.Cyl("WoodLight", new Vector3(0f, 0.54f, 0f), 0.36f, 0.05f, 0.015f, Vector3.zero, 20);
@@ -213,6 +259,7 @@ namespace Elfshift.EditorTools
                 mb.Ball("CookieBrown", new Vector3(-0.08f + Mathf.Cos(i * 1.6f) * 0.05f, 0.615f + (i == 3 ? 0.02f : 0f), 0.05f + Mathf.Sin(i * 1.6f) * 0.05f), 0.04f, new Vector3(1f, 0.35f, 1f), Vector3.zero, 8);
             mb.Cyl("Cream", new Vector3(0.18f, 0.59f, -0.1f), 0.045f, 0.09f, 0.01f, Vector3.zero, 10);
             mb.Ring("Cream", new Vector3(0.235f, 0.64f, -0.1f), 0.03f, 0.008f, new Vector3(0f, 0f, 90f), 8, 5);
+            }
             ModelKit.Part(root, "Body", mb);
             GameObject col = new GameObject("Collider");
             col.transform.SetParent(root, false);
@@ -226,12 +273,16 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("DisplayTable");
             Transform root = ModelKit.Empty(parent, "DisplayTable", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
+            if (!TryImport(mb, "Decor_DisplayTable", Vector3.zero, Vector3.zero, 1f))
+            {
             mb.Cyl("WoodDark", Vector3.zero, 0.7f, 0.08f, 0.02f, Vector3.zero, 24);
             mb.Cyl("WoodMid", new Vector3(0f, 0.06f, 0f), 0.14f, 0.72f, 0.02f, Vector3.zero, 14);
             mb.Cyl("WoodLight", new Vector3(0f, 0.76f, 0f), 1.05f, 0.07f, 0.02f, Vector3.zero, 28);
             mb.Taper("RedSanta", new Vector3(0f, 0.5f, 0f), 1.12f, 1.08f, 0.32f, 0.04f, Vector3.zero, 28);
             mb.Cyl("Cream", new Vector3(0f, 0.83f, 0f), 0.98f, 0.02f, 0.008f, Vector3.zero, 28);
             mb.Ring("Gold", new Vector3(0f, 0.84f, 0f), 0.96f, 0.014f, Vector3.zero, 28, 6);
+            }
+            // giocattoli in vetrina (sul centrino, a 0,85 m)
             AddTeddy(mb, new Vector3(-0.4f, 0.85f, 0.15f), 0.9f, "CookieBrown", 25f);
             AddRobot(mb, new Vector3(0.4f, 0.85f, 0.1f), 0.9f, "ClothTeal", -20f);
             AddDrum(mb, new Vector3(0.05f, 0.85f, -0.45f), 1.0f);
@@ -250,9 +301,12 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("Chandelier");
             Transform root = ModelKit.Empty(parent, "Chandelier", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
-            mb.Cyl("WoodDark", new Vector3(0f, -0.04f, 0f), 0.14f, 0.08f, 0.02f, Vector3.zero, 12);
-            mb.CylC("Iron", new Vector3(0f, -cordLength / 2f, 0f), 0.016f, cordLength, 0.004f, Vector3.zero, 6);
+            if (!TryImport(mb, "Decor_ChandelierMount", Vector3.zero, Vector3.zero, 1f))
+                mb.Cyl("WoodDark", new Vector3(0f, -0.04f, 0f), 0.14f, 0.08f, 0.02f, Vector3.zero, 12);
+            mb.CylC("Iron", new Vector3(0f, -cordLength / 2f, 0f), 0.016f, cordLength, 0.004f, Vector3.zero, 8);
             Vector3 center = new Vector3(0f, -cordLength, 0f);
+            if (!TryImport(mb, "Decor_Chandelier", center, Vector3.zero, 1f))
+            {
             mb.Ring("Gold", center, 0.8f, 0.04f, Vector3.zero, 28, 8);
             mb.Ring("Iron", center + new Vector3(0f, 0.18f, 0f), 0.45f, 0.025f, Vector3.zero, 22, 6);
             mb.Ball("Gold", center + new Vector3(0f, 0.08f, 0f), 0.1f, 10);
@@ -266,6 +320,7 @@ namespace Elfshift.EditorTools
                 mb.Tube(chain, 0.008f, 0.008f, 4, "Iron", null, 0, false);
                 mb.Ball("RedSanta", center + new Vector3(Mathf.Cos(a + 0.5f) * 0.8f, -0.06f, Mathf.Sin(a + 0.5f) * 0.8f), 0.05f, 8);
             }
+            }
             ModelKit.Part(root, "Mesh", mb);
             lightLocalPos = center + new Vector3(0f, 0.1f, 0f);
             return root.gameObject;
@@ -277,6 +332,8 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("WallClock");
             Transform root = ModelKit.Empty(parent, "WallClock", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
+            if (!TryImport(mb, "Decor_WallClock", Vector3.zero, Vector3.zero, 1f))
+            {
             mb.Cyl("Cream", Vector3.zero, 0.42f, 0.06f, 0.01f, new Vector3(90f, 0f, 0f), 28);
             mb.Ring("Gold", new Vector3(0f, 0f, 0.0f), 0.42f, 0.04f, new Vector3(90f, 0f, 0f), 28, 8);
             for (int i = 0; i < 12; i++)
@@ -294,6 +351,7 @@ namespace Elfshift.EditorTools
             mb.Ball("GreenElf", new Vector3(-0.22f, 0.42f, 0.04f), 0.07f, new Vector3(1.3f, 0.6f, 0.4f), new Vector3(0f, 0f, 30f), 8);
             mb.Ball("GreenElf", new Vector3(0.22f, 0.42f, 0.04f), 0.07f, new Vector3(1.3f, 0.6f, 0.4f), new Vector3(0f, 0f, -30f), 8);
             mb.Ball("RedSanta", new Vector3(0f, 0.42f, 0.06f), 0.04f, 8);
+            }
             ModelKit.Part(root, "Mesh", mb);
             return root.gameObject;
         }
@@ -314,8 +372,10 @@ namespace Elfshift.EditorTools
                 path[i] = p;
             }
             MeshBuilder mb = new MeshBuilder();
-            mb.Tube(path, 0.01f, 0.01f, 4, "WoodDeep", null, 0, false);
+            mb.Tube(path, 0.01f, 0.01f, 6, "WoodDeep", null, 0, false);
             string[] colors = { "RedSanta", "GreenElf", "Gold", "Snow", "ClothBlue" };
+            // bandierine di stoffa fatte in Blender (il giallo è stoffa, non metallo)
+            string[] flagModels = { "Decor_BuntingFlag_RedSanta", "Decor_BuntingFlag_GreenElf", "Decor_BuntingFlag_ClothYellow", "Decor_BuntingFlag_Snow", "Decor_BuntingFlag_ClothBlue" };
             Vector3 dir = to - from;
             Vector2[] triangle = { new Vector2(-0.17f, 0f), new Vector2(0.17f, 0f), new Vector2(0f, -0.34f) };
             for (int i = 0; i < flagCount; i++)
@@ -325,6 +385,10 @@ namespace Elfshift.EditorTools
                 p.y -= sag * 4f * t * (1f - t);
                 // le bandierine si orientano lungo il filo
                 float tiltYaw = Mathf.Abs(dir.x) > Mathf.Abs(dir.z) ? 0f : 90f;
+                // piccola oscillazione diversa per ogni bandierina: sembrano appese a mano
+                float sway = Mathf.Sin(i * 12.9898f) * 7f;
+                float twist = Mathf.Sin(i * 78.233f) * 6f;
+                if (TryImport(mb, flagModels[i % flagModels.Length], p, new Vector3(sway, tiltYaw + twist, 0f), 1f)) continue;
                 mb.Prism(MeshBuilder.Xf(p + new Vector3(0f, -0.01f, 0f), new Vector3(0f, tiltYaw, 0f)), triangle, 0.012f, mb.Sub(colors[i % colors.Length]));
             }
             ModelKit.Part(root, "Mesh", mb);

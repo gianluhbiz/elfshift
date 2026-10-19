@@ -21,13 +21,18 @@ namespace Elfshift.Core
         public const string NothingToBuild = "Niente da costruire: posa 2 legni sul banco e guardalo";
 
         // Obiettivi del tutorial (mostrati in alto durante il primo ordine)
-        public const string GoalTakeWood = "Obiettivo: vai allo scaffale del legno e prendi un legno (clic sinistro)";
-        public const string GoalPlaceWood = "Obiettivo: porta il legno al banco di costruzione e posalo (clic sinistro)";
-        public const string GoalSecondWood = "Obiettivo: ti serve un altro legno: torna allo scaffale";
-        public const string GoalBuild = "Obiettivo: guarda il banco e tieni premuto E (o tasto destro) per costruire";
-        public const string GoalTakeToy = "Obiettivo: prendi il trenino dal banco (clic sinistro)";
-        public const string GoalDeliver = "Obiettivo: porta il trenino alla slitta, fuori dalla porta a destra";
+        public const string GoalTakeWood = "Vai allo scaffale del legno e prendi un legno (clic sinistro)";
+        public const string GoalPlaceWood = "Porta il legno al banco di costruzione e posalo (clic sinistro)";
+        public const string GoalSecondWood = "Ti serve un altro legno: torna allo scaffale";
+        public const string GoalBuild = "Guarda il banco e tieni premuto E (o tasto destro) per costruire";
+        public const string GoalTakeToy = "Prendi il trenino dal banco (clic sinistro)";
+        public const string GoalDeliver = "Porta il trenino alla slitta, fuori dalla porta a destra";
         public const string GoalWaitOrder = "Aspetta la prossima letterina...";
+
+        public const string GoalTitle = "Obiettivo";
+        public const string StampDone = "Consegnato!";
+        public const string StampFail = "Scaduto";
+        public const string CarriedTitle = "In mano";
 
         public const string KeyPickup = "CLIC SX";
         public const string KeyInteract = "E";

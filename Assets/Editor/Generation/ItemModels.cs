@@ -2,12 +2,24 @@ using UnityEngine;
 
 namespace Elfshift.EditorTools
 {
-    /// <summary>Modelli 3D provvisori degli oggetti trasportabili. L'origine di ogni modello è al centro della sua base.</summary>
+    /// <summary>
+    /// Modelli 3D degli oggetti trasportabili. L'origine di ogni modello è al centro della sua base.
+    /// I modelli veri sono scolpiti in Blender (Tools/Blender/models/items.py → Assets/Models/Source/Item_*.bytes);
+    /// se un file manca si usa la vecchia forma geometrica di riserva, così il gioco funziona comunque.
+    /// </summary>
     public static class ItemModels
     {
+        // Misure del tronchetto modellato in Blender (Item_Log): servono a scalarlo alle misure richieste.
+        private const float BlenderLogRadius = 0.1f;
+        private const float BlenderLogLength = 0.56f;
+
         /// <summary>Un tronchetto orizzontale (asse X), con le sezioni chiare alle estremità.</summary>
         public static void AddLog(MeshBuilder mb, Vector3 center, float radius, float length, float yawDegrees = 0f)
         {
+            Matrix4x4 logXf = Matrix4x4.TRS(center, Quaternion.Euler(0f, yawDegrees, 0f),
+                new Vector3(length / BlenderLogLength, radius / BlenderLogRadius, radius / BlenderLogRadius));
+            if (mb.Import("Item_Log", logXf)) return;
+
             float h = length;
             float b = Mathf.Min(0.02f, radius * 0.3f);
             // Corteccia: tubo con bordi arrotondati, senza tappi.
@@ -31,6 +43,8 @@ namespace Elfshift.EditorTools
         /// <summary>Fascio di tre tronchetti legati con un nastro rosso: l'oggetto "Legno".</summary>
         public static void AddLogBundle(MeshBuilder mb, Vector3 origin, float scale = 1f)
         {
+            if (mb.Import("Item_Wood", origin, Vector3.zero, scale)) return;
+
             float r = 0.1f * scale;
             float len = 0.56f * scale;
             AddLog(mb, origin + new Vector3(0f, r, -r * 1.05f), r, len);
@@ -61,7 +75,13 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("Item_Train");
             Transform root = ModelKit.Empty(parent, "Item_Train", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
+            if (mb.Import("Item_Train", Vector3.zero))
+            {
+                ModelKit.Part(root, "Mesh", mb);
+                return root.gameObject;
+            }
 
+            // --- forma di riserva (se manca il modello di Blender) ---
             // telaio
             mb.Box("WoodDeep", new Vector3(0f, 0.105f, 0f), new Vector3(0.2f, 0.05f, 0.92f), 0.015f);
             // --- locomotiva (z positivo)

@@ -5,7 +5,8 @@ namespace Elfshift.Player
 {
     /// <summary>
     /// Movimento dell'elfo in prima persona: W/S avanti/indietro, A/D passo laterale, Maiusc scatto, Spazio salto, relativi alla direzione
-    /// in cui guardi. Accelerazione e decelerazione morbide; collisioni con i mobili tramite
+    /// in cui guardi. Movimento "piantato a terra": la direzione segue SUBITO lo sguardo (niente effetto ghiaccio
+    /// quando giri il mouse), la partenza è rapidissima e lo stop quasi istantaneo. Collisioni con i mobili tramite
     /// CharacterController (nessuna compenetrazione). La rotazione è gestita da <see cref="FirstPersonLook"/>.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
@@ -16,14 +17,18 @@ namespace Elfshift.Player
         [Header("Movimento")]
         [Min(0.5f)] [SerializeField] private float maxSpeed = 4.6f;
         [Min(1f)] [Tooltip("Di quante volte aumenta la velocità tenendo premuto Maiusc.")] [SerializeField] private float sprintMultiplier = 1.7f;
-        [Min(1f)] [SerializeField] private float acceleration = 22f;
-        [Min(1f)] [SerializeField] private float deceleration = 30f;
-        [SerializeField] private float gravity = -25f;
+        [Min(1f)] [Tooltip("Metri al secondo guadagnati ogni secondo in partenza (alto = scattante).")] [SerializeField] private float acceleration = 60f;
+        [Min(1f)] [Tooltip("Metri al secondo persi ogni secondo quando lasci i tasti (alto = si ferma subito).")] [SerializeField] private float deceleration = 90f;
+        [Range(0f, 1f)] [Tooltip("Quanto si può correggere la direzione in aria (0 = niente, 1 = come a terra).")] [SerializeField] private float airControl = 0.6f;
+        [SerializeField] private float gravity = -30f;
         [Min(0.2f)] [Tooltip("Altezza del salto in metri.")] [SerializeField] private float jumpHeight = 1.0f;
 
         private CharacterController controller;
         private ICharacterVisual visual;
         private Vector3 planarVelocity;
+        // Velocità espressa rispetto all'elfo (x = di lato, y = avanti): così quando giri lo sguardo
+        // il movimento gira con te invece di continuare nella vecchia direzione.
+        private Vector2 localVelocity;
         private float verticalVelocity;
 
         /// <summary>Moltiplicatore della velocità (miglioramenti del negozio, bufera di neve...).</summary>
@@ -66,12 +71,19 @@ namespace Elfshift.Player
             // Si scatta solo andando avanti (non di lato o indietro) e non mentre si costruisce.
             IsSprinting = input.SprintHeld && !MovementLocked && raw.y > 0.3f;
             float speedLimit = maxSpeed * Mathf.Max(0f, SpeedMultiplier) * (IsSprinting ? sprintMultiplier : 1f);
-            Vector3 desired = (right * raw.x + forward * raw.y) * speedLimit;
-            float rate = desired.sqrMagnitude > 0.001f ? acceleration : deceleration;
-            planarVelocity = Vector3.MoveTowards(planarVelocity, desired, rate * dt);
+            Vector2 desired = Vector2.ClampMagnitude(raw, 1f) * speedLimit;
 
             bool grounded = controller.isGrounded;
             IsGrounded = grounded;
+
+            // A terra: se c'è input si accelera verso la velocità voluta, altrimenti si frena forte.
+            // Se si inverte la direzione si usa la frenata (più forte) così il cambio è immediato.
+            bool hasInput = desired.sqrMagnitude > 0.0001f;
+            bool reversing = hasInput && Vector2.Dot(desired, localVelocity) < 0f;
+            float rate = hasInput && !reversing ? acceleration : deceleration;
+            if (!grounded) rate *= airControl;
+            localVelocity = Vector2.MoveTowards(localVelocity, desired, rate * dt);
+            planarVelocity = right * localVelocity.x + forward * localVelocity.y;
             if (grounded && verticalVelocity < 0f) verticalVelocity = -2f;
             if (grounded && input.JumpPressed) verticalVelocity = Mathf.Sqrt(-2f * gravity * jumpHeight);
             verticalVelocity += gravity * dt;
@@ -90,6 +102,7 @@ namespace Elfshift.Player
             transform.SetPositionAndRotation(position, rotation);
             controller.enabled = true;
             planarVelocity = Vector3.zero;
+            localVelocity = Vector2.zero;
             verticalVelocity = 0f;
         }
     }

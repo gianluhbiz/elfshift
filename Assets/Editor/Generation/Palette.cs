@@ -100,6 +100,15 @@ namespace Elfshift.EditorTools
             { "RugCream",   M("#F3E3C0", 0.12f) },
             { "SnowGround", M("#EAF2FC", 0.35f) },
             { "Night",      M("#14203F", 0.2f) },
+            // --- aggiunte gruppo mobili ---
+            // --- aggiunte gruppo oggetti di scena ---
+            // --- aggiunte gruppo decorazioni ---
+            { "StoneWarm",  M("#A69C90", 0.2f) },
+            { "StoneLight", M("#BDB5A8", 0.2f) },
+            { "Soot",       M("#2C2826", 0.15f) },
+            // --- aggiunte gruppo personaggi e oggetti ---
+            { "FurWhite",   M("#F3EDE2", 0.08f) },
+            // --- aggiunte struttura e interfaccia ---
         };
     }
 }

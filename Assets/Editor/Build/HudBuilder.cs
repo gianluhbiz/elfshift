@@ -23,25 +23,36 @@ namespace Elfshift.EditorTools
     }
 
     /// <summary>
-    /// Costruisce l'interfaccia di gioco in stile "adesivo cartoon": pannelli tondi con contorno marrone spesso,
-    /// colori caldi e saturi, font arrotondato e tante piccole animazioni (rimbalzi, dondolii, scritte volanti).
-    /// Il Canvas scala rispetto a 1280x720 e gli elementi sono ancorati ai bordi dello schermo.
+    /// Costruisce l'interfaccia di gioco in stile "cozy" pulito: pannelli color carta con angoli tondi e ombra
+    /// morbida (niente contorni spessi), testo marrone caldo nel font arrotondato Nunito, icone disegnate in 3D,
+    /// animazioni brevi e leggere. Il Canvas scala rispetto a 1280x720 e gli elementi sono ancorati ai bordi.
     /// </summary>
     public static class HudBuilder
     {
-        private static readonly Color Ink = new Color(0.23f, 0.15f, 0.13f, 1f);
-        private static readonly Color Cream = new Color(1f, 0.95f, 0.8f, 1f);
-        private static readonly Color Gold = new Color(1f, 0.82f, 0.3f, 1f);
-        private static readonly Color Red = new Color(0.93f, 0.3f, 0.32f, 1f);
-        private static readonly Color Green = new Color(0.36f, 0.76f, 0.45f, 1f);
+        // ------------------------------------------------------------------ colori dell'interfaccia
+        private static readonly Color Paper = new Color(1f, 0.969f, 0.918f, 0.97f);
+        private static readonly Color PaperDim = new Color(0.953f, 0.902f, 0.827f, 1f);
+        private static readonly Color Ink = new Color(0.29f, 0.227f, 0.2f, 1f);
+        private static readonly Color InkSoft = new Color(0.55f, 0.455f, 0.4f, 1f);
+        private static readonly Color Red = new Color(0.85f, 0.34f, 0.31f, 1f);
+        private static readonly Color Green = new Color(0.49f, 0.73f, 0.43f, 1f);
+        private static readonly Color Amber = new Color(0.98f, 0.76f, 0.33f, 1f);
+        private static readonly Color Track = new Color(0.918f, 0.859f, 0.784f, 1f);
+        private static readonly Color Glass = new Color(0.17f, 0.13f, 0.12f, 0.55f);
         private static readonly Color White = Color.white;
 
-        private static Sprite panel;
-        private static Sprite circle;
-        private static Sprite ring;
+        // Raggio degli angoli dello sprite del pannello (pixel), usato per scalarlo con pixelsPerUnitMultiplier.
+        private const float PanelSpriteRadius = 24f;
+
+        private static Sprite panel;     // pannello carta con ombra morbida (9-slice)
+        private static Sprite plain;     // rettangolo tondo senza ombra (barre, pillole scure)
+        private static Sprite disc;      // cerchio pieno
+        private static Sprite softDisc;  // cerchio con ombra
+        private static Sprite keycap;    // tasto della tastiera
         private static Sprite cookieSprite;
         private static Sprite starSprite;
-        private static Font font;
+        private static Font font;        // Nunito SemiBold: testi
+        private static Font fontBold;    // Nunito Bold: numeri e titoli
 
         // ================================================================== punto d'ingresso
         public static GameObject Build(HudSources src)
@@ -59,11 +70,11 @@ namespace Elfshift.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
 
             RectTransform safe = NewRect("SafeArea", canvasObject.transform);
-            Stretch(safe, 26f);
+            Stretch(safe, 24f);
 
             // modello delle scritte volanti (resta spento, viene copiato)
-            Text floatingTemplate = NewText("FloatingTemplate", canvasObject.transform, "+0", 46, Gold, TextAnchor.MiddleCenter, true);
-            floatingTemplate.rectTransform.sizeDelta = new Vector2(220f, 70f);
+            Text floatingTemplate = NewText("FloatingTemplate", canvasObject.transform, "+0", 30, Amber, TextAnchor.MiddleCenter, true, true);
+            floatingTemplate.rectTransform.sizeDelta = new Vector2(200f, 50f);
             floatingTemplate.gameObject.SetActive(false);
             FloatingTextSpawner spawner = canvasObject.AddComponent<FloatingTextSpawner>();
             Wire.Ref(spawner, "template", floatingTemplate);
@@ -104,18 +115,51 @@ namespace Elfshift.EditorTools
         private static void LoadAssets()
         {
             string ui = AssetUtil.GeneratedTextures + "/UI";
-            panel = SaveSprite(ProceduralTextures.CartoonPanel(128, 40f, 9f), ui + "/ui_panel.png", new Vector4(44f, 44f, 44f, 44f));
-            circle = SaveSprite(ProceduralTextures.CartoonCircle(128, 9f), ui + "/ui_circle.png", Vector4.zero);
-            ring = SaveSprite(ProceduralTextures.RingSprite(64, 7f), ui + "/ui_ring.png", Vector4.zero);
-            cookieSprite = SaveSprite(ProceduralTextures.Cookie(128), ui + "/icon_cookie.png", Vector4.zero);
-            starSprite = SaveSprite(ProceduralTextures.Star(128), ui + "/icon_star.png", Vector4.zero);
+            float panelBorder = ProceduralTextures.SoftPanelPad + PanelSpriteRadius + 2f;
+            panel = SaveSprite(ProceduralTextures.SoftPanel(128, PanelSpriteRadius, ProceduralTextures.SoftPanelPad), ui + "/ui_panel_soft.png",
+                new Vector4(panelBorder, panelBorder, panelBorder, panelBorder));
+            plain = SaveSprite(ProceduralTextures.RoundedRect(64, PanelSpriteRadius), ui + "/ui_rounded.png", new Vector4(26f, 26f, 26f, 26f));
+            disc = SaveSprite(ProceduralTextures.Disc(64), ui + "/ui_disc.png", Vector4.zero);
+            softDisc = SaveSprite(ProceduralTextures.SoftDisc(128), ui + "/ui_disc_soft.png", Vector4.zero);
+            keycap = SaveSprite(ProceduralTextures.Keycap(64, 14f, 5f), ui + "/ui_keycap.png", new Vector4(18f, 18f, 18f, 18f));
 
-            font = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/LilitaOne-Regular.ttf");
-            if (font == null)
+            // Icone disegnate in 3D con Blender (Tools/Blender/ui_icons.py); se mancano uso quelle procedurali.
+            starSprite = LoadIcon("Assets/UI/Icons/icon_star.png");
+            if (starSprite == null) starSprite = SaveSprite(ProceduralTextures.Star(128), ui + "/icon_star.png", Vector4.zero);
+            cookieSprite = LoadIcon("Assets/UI/Icons/icon_cookie.png");
+            if (cookieSprite == null) cookieSprite = SaveSprite(ProceduralTextures.Cookie(128), ui + "/icon_cookie.png", Vector4.zero);
+
+            font = LoadFont("Assets/Fonts/Nunito-SemiBold.ttf");
+            fontBold = LoadFont("Assets/Fonts/Nunito-Bold.ttf");
+            if (fontBold == null) fontBold = font;
+        }
+
+        private static Font LoadFont(string path)
+        {
+            Font f = AssetDatabase.LoadAssetAtPath<Font>(path);
+            if (f == null)
             {
-                Debug.LogWarning("[Elfshift] Font Assets/Fonts/LilitaOne-Regular.ttf non trovato: uso il font standard.");
-                font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                Debug.LogWarning("[Elfshift] Font " + path + " non trovato: uso il font standard.");
+                f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
+            return f;
+        }
+
+        /// <summary>Carica un'icona PNG del progetto impostandola come Sprite (se serve).</summary>
+        private static Sprite LoadIcon(string path)
+        {
+            if (!System.IO.File.Exists(path)) return null;
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         private static Sprite SaveSprite(Texture2D texture, string path, Vector4 border)
@@ -129,11 +173,14 @@ namespace Elfshift.EditorTools
         private static Image BuildCrosshair(Transform parent)
         {
             RectTransform rt = NewRect("Crosshair", parent);
-            Anchor(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(20f, 20f));
+            Anchor(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7f, 7f));
             Image image = rt.gameObject.AddComponent<Image>();
-            image.sprite = ring;
-            image.color = new Color(1f, 1f, 1f, 0.8f);
+            image.sprite = disc;
+            image.color = new Color(1f, 1f, 1f, 0.85f);
             image.raycastTarget = false;
+            Shadow s = rt.gameObject.AddComponent<Shadow>();
+            s.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            s.effectDistance = new Vector2(0f, -1f);
             return image;
         }
 
@@ -142,69 +189,72 @@ namespace Elfshift.EditorTools
         {
             GameObject root = new GameObject("OrderCard", typeof(RectTransform));
             RectTransform rt = (RectTransform)root.transform;
-            rt.sizeDelta = new Vector2(280f, 116f);
+            rt.sizeDelta = new Vector2(244f, 84f);
 
             // tutta la grafica sta nel figlio "Visual" (si anima senza disturbare il layout)
             RectTransform visual = NewRect("Visual", rt);
             Stretch(visual, 0f);
             CanvasGroup group = visual.gameObject.AddComponent<CanvasGroup>();
-            Image bg = AddPanelImage(visual.gameObject, Cream, 7f);
+            Image bg = AddPanel(visual, Paper, 18f);
 
-            // fiocco/sigillo rosso in alto a sinistra
-            RectTransform seal = NewRect("Seal", visual);
-            Anchor(seal, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(10f, -6f), new Vector2(40f, 40f));
-            Image sealImage = seal.gameObject.AddComponent<Image>();
-            sealImage.sprite = circle;
-            sealImage.color = Red;
-            RectTransform sealStar = NewRect("Star", seal);
-            Stretch(sealStar, 9f);
-            Image sealStarImage = sealStar.gameObject.AddComponent<Image>();
-            sealStarImage.sprite = starSprite;
-            sealStarImage.preserveAspect = true;
-
-            // icona del giocattolo dentro un distintivo tondo
+            // icona del giocattolo dentro un tondo color carta più scura
             RectTransform badge = NewRect("IconBadge", visual);
-            Anchor(badge, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, -2f), new Vector2(88f, 88f));
+            Anchor(badge, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(11f, 0f), new Vector2(62f, 62f));
             Image badgeImage = badge.gameObject.AddComponent<Image>();
-            badgeImage.sprite = circle;
-            badgeImage.color = new Color(1f, 0.9f, 0.55f);
+            badgeImage.sprite = disc;
+            badgeImage.color = PaperDim;
             RectTransform iconRt = NewRect("Icon", badge);
-            Stretch(iconRt, 10f);
+            Stretch(iconRt, 5f);
             RawImage icon = iconRt.gameObject.AddComponent<RawImage>();
             icon.color = White;
             icon.raycastTarget = false;
 
-            Text title = NewText("Title", visual, "Giocattolo", 32, Ink, TextAnchor.UpperLeft, false);
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(112f, -48f), new Vector2(-14f, -12f));
-            Text child = NewText("Child", visual, "Per Marta", 21, new Color(0.5f, 0.32f, 0.22f), TextAnchor.UpperLeft, false);
-            SetRect(child.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(112f, -72f), new Vector2(-14f, -46f));
+            // piccolo sigillo rosso in alto a sinistra (la "ceralacca" della letterina)
+            RectTransform seal = NewRect("Seal", visual);
+            Anchor(seal, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(12f, -12f), new Vector2(20f, 20f));
+            Image sealImage = seal.gameObject.AddComponent<Image>();
+            sealImage.sprite = disc;
+            sealImage.color = Red;
+            RectTransform sealStar = NewRect("Star", seal);
+            Stretch(sealStar, 4f);
+            Image sealStarImage = sealStar.gameObject.AddComponent<Image>();
+            sealStarImage.sprite = starSprite;
+            sealStarImage.preserveAspect = true;
+            sealStarImage.color = new Color(1f, 0.95f, 0.85f);
 
-            // barra del tempo "a pillola"
+            Text title = NewText("Title", visual, "Giocattolo", 20, Ink, TextAnchor.UpperLeft, true, false);
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(84f, -38f), new Vector2(-58f, -11f));
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Text child = NewText("Child", visual, "Per Marta", 15, InkSoft, TextAnchor.UpperLeft, false, false);
+            SetRect(child.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(84f, -58f), new Vector2(-14f, -37f));
+
+            Text time = NewText("Time", visual, "2:00", 15, InkSoft, TextAnchor.UpperRight, true, false);
+            SetRect(time.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-60f, -34f), new Vector2(-14f, -12f));
+
+            // barra del tempo sottile
             RectTransform barBg = NewRect("TimerBack", visual);
-            SetRect(barBg, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(112f, 14f), new Vector2(-78f, 36f));
-            AddPanelImage(barBg.gameObject, new Color(0.45f, 0.3f, 0.22f, 0.9f), 0f);
+            SetRect(barBg, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(84f, 14f), new Vector2(-16f, 22f));
+            Image barBgImage = barBg.gameObject.AddComponent<Image>();
+            barBgImage.sprite = plain;
+            barBgImage.type = Image.Type.Sliced;
+            barBgImage.pixelsPerUnitMultiplier = PanelSpriteRadius / 4f;
+            barBgImage.color = Track;
             RectTransform fill = NewRect("TimerFill", barBg);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
-            fill.offsetMin = new Vector2(3f, 3f);
-            fill.offsetMax = new Vector2(-3f, -3f);
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
             Image fillImage = fill.gameObject.AddComponent<Image>();
-            fillImage.sprite = panel;
+            fillImage.sprite = plain;
             fillImage.type = Image.Type.Sliced;
+            fillImage.pixelsPerUnitMultiplier = PanelSpriteRadius / 4f;
             fillImage.color = Green;
 
-            Text time = NewText("Time", visual, "2:00", 28, White, TextAnchor.MiddleRight, true);
-            time.rectTransform.anchorMin = new Vector2(1f, 0f);
-            time.rectTransform.anchorMax = new Vector2(1f, 0f);
-            time.rectTransform.pivot = new Vector2(1f, 0f);
-            time.rectTransform.anchoredPosition = new Vector2(-14f, 10f);
-            time.rectTransform.sizeDelta = new Vector2(76f, 34f);
-
-            // timbro "OK!" che compare alla consegna
+            // timbro che compare alla consegna
             RectTransform stamp = NewRect("Stamp", visual);
-            Anchor(stamp, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(40f, 0f), new Vector2(190f, 90f));
-            stamp.localRotation = Quaternion.Euler(0f, 0f, -12f);
-            Text stampText = NewText("StampText", stamp, "OK!", 78, new Color(0.35f, 0.85f, 0.4f), TextAnchor.MiddleCenter, true);
+            Anchor(stamp, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(34f, -2f), new Vector2(180f, 44f));
+            stamp.localRotation = Quaternion.Euler(0f, 0f, -8f);
+            Text stampText = NewText("StampText", stamp, UiText.StampDone, 26, Green, TextAnchor.MiddleCenter, true, false);
             Stretch(stampText.rectTransform, 0f);
             stamp.gameObject.SetActive(false);
 
@@ -231,9 +281,9 @@ namespace Elfshift.EditorTools
         private static RectTransform BuildOrdersBar(RectTransform parent)
         {
             RectTransform bar = NewRect("OrdersBar", parent);
-            Anchor(bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(900f, 124f));
+            Anchor(bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -2f), new Vector2(820f, 90f));
             HorizontalLayoutGroup layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 18f;
+            layout.spacing = 14f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -242,56 +292,55 @@ namespace Elfshift.EditorTools
             return bar;
         }
 
+        /// <summary>Una sola pillola in alto a sinistra: stella + punti, biscotto + biscotti.</summary>
         private static void BuildStats(RectTransform parent, out Text pointsText, out Text cookiesText, out UiPop pointsPop, out UiPop cookiesPop)
         {
-            pointsText = BuildStatBadge(parent, "Points", starSprite, new Color(1f, 0.85f, 0.35f), 0f, 0.1f, out pointsPop);
-            cookiesText = BuildStatBadge(parent, "Cookies", cookieSprite, new Color(0.95f, 0.7f, 0.45f), -74f, 0.2f, out cookiesPop);
+            RectTransform pill = NewRect("Stats", parent);
+            Anchor(pill, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -2f), new Vector2(236f, 48f));
+            AddPanel(pill, Paper, 24f);
+            UiPop pillPop = pill.gameObject.AddComponent<UiPop>();
+            Wire.Float(pillPop, "delay", 0.1f);
+
+            pointsText = BuildStat(pill, "Points", starSprite, 10f, out pointsPop);
+            cookiesText = BuildStat(pill, "Cookies", cookieSprite, 124f, out cookiesPop);
+
+            // sottile separatore fra le due voci
+            RectTransform divider = NewRect("Divider", pill);
+            Anchor(divider, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(117f, 0f), new Vector2(2f, 24f));
+            Image d = divider.gameObject.AddComponent<Image>();
+            d.sprite = plain;
+            d.type = Image.Type.Sliced;
+            d.pixelsPerUnitMultiplier = PanelSpriteRadius;
+            d.color = Track;
         }
 
-        private static Text BuildStatBadge(RectTransform parent, string name, Sprite icon, Color badgeColor, float y, float popDelay, out UiPop iconPop)
+        private static Text BuildStat(RectTransform pill, string name, Sprite icon, float x, out UiPop iconPop)
         {
-            RectTransform pill = NewRect(name, parent);
-            Anchor(pill, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, y - 8f), new Vector2(190f, 58f));
-            AddPanelImage(pill.gameObject, Cream, 6f);
-            UiPop pillPop = pill.gameObject.AddComponent<UiPop>();
-            Wire.Float(pillPop, "delay", popDelay);
-
-            RectTransform badge = NewRect("Badge", pill);
-            Anchor(badge, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-4f, 2f), new Vector2(76f, 76f));
-            Image badgeImage = badge.gameObject.AddComponent<Image>();
-            badgeImage.sprite = circle;
-            badgeImage.color = badgeColor;
-            Shadow s = badge.gameObject.AddComponent<Shadow>();
-            s.effectColor = new Color(0f, 0f, 0f, 0.3f);
-            s.effectDistance = new Vector2(0f, -5f);
-            iconPop = badge.gameObject.AddComponent<UiPop>();
-            Wire.Float(iconPop, "delay", popDelay + 0.1f);
-
-            RectTransform iconRt = NewRect("Icon", badge);
-            Stretch(iconRt, 7f);
+            RectTransform iconRt = NewRect(name + "Icon", pill);
+            Anchor(iconRt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x + 17f, 0f), new Vector2(36f, 36f));
             Image iconImage = iconRt.gameObject.AddComponent<Image>();
             iconImage.sprite = icon;
             iconImage.preserveAspect = true;
+            iconPop = iconRt.gameObject.AddComponent<UiPop>();
+            Wire.Float(iconPop, "delay", 0.2f);
 
-            Text value = NewText("Value", pill, "0", 40, Ink, TextAnchor.MiddleRight, false);
-            value.rectTransform.anchorMin = new Vector2(0f, 0f);
-            value.rectTransform.anchorMax = new Vector2(1f, 1f);
-            value.rectTransform.offsetMin = new Vector2(54f, 0f);
-            value.rectTransform.offsetMax = new Vector2(-18f, -2f);
+            Text value = NewText(name, pill, "0", 22, Ink, TextAnchor.MiddleLeft, true, false);
+            SetRect(value.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(x + 40f, 0f), new Vector2(x + 104f, -1f));
+            value.horizontalOverflow = HorizontalWrapMode.Overflow;
             return value;
         }
 
         private static ToastView BuildToast(RectTransform parent)
         {
             RectTransform toast = NewRect("Toast", parent);
-            Anchor(toast, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1000f, 82f));
+            Anchor(toast, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(760f, 58f));
             CanvasGroup group = toast.gameObject.AddComponent<CanvasGroup>();
             group.alpha = 0f;
             group.interactable = false;
             group.blocksRaycasts = false;
-            AddPanelImage(toast.gameObject, new Color(1f, 0.97f, 0.85f), 8f);
-            Text label = NewText("Label", toast, "", 36, Ink, TextAnchor.MiddleCenter, false);
-            Stretch(label.rectTransform, 12f);
+            AddPanel(toast, Paper, 22f);
+            Text label = NewText("Label", toast, "", 21, Ink, TextAnchor.MiddleCenter, false, false);
+            Stretch(label.rectTransform, 14f);
 
             ToastView view = toast.gameObject.AddComponent<ToastView>();
             Wire.Ref(view, "label", label);
@@ -302,19 +351,44 @@ namespace Elfshift.EditorTools
         // ================================================================== obiettivo del tutorial
         private static void BuildGoalBanner(RectTransform parent, HudSources src)
         {
+            // pillola che si allarga da sola in base al testo
             RectTransform banner = NewRect("Goal", parent);
-            Anchor(banner, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -136f), new Vector2(980f, 56f));
-            AddPanelImage(banner.gameObject, Red, 7f);
+            Anchor(banner, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -102f), new Vector2(600f, 42f));
+            AddPanel(banner, Paper, 21f);
+            HorizontalLayoutGroup layout = banner.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 22, 6, 6);
+            layout.spacing = 10f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            ContentSizeFitter fitter = banner.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
             UiWobble wobble = banner.gameObject.AddComponent<UiWobble>();
-            Wire.Float(wobble, "rotationDegrees", 0.6f);
-            Wire.Float(wobble, "scaleAmount", 0.012f);
-            Wire.Float(wobble, "floatPixels", 3f);
+            Wire.Float(wobble, "rotationDegrees", 0f);
+            Wire.Float(wobble, "scaleAmount", 0f);
+            Wire.Float(wobble, "floatPixels", 2f);
 
-            Text label = NewText("Label", banner, "Obiettivo", 28, White, TextAnchor.MiddleCenter, true);
-            Stretch(label.rectTransform, 8f);
+            // etichetta rossa "Obiettivo"
+            RectTransform tag = NewRect("Tag", banner);
+            LayoutElement tagLayout = tag.gameObject.AddComponent<LayoutElement>();
+            tagLayout.preferredWidth = 92f;
+            tagLayout.preferredHeight = 30f;
+            Image tagImage = tag.gameObject.AddComponent<Image>();
+            tagImage.sprite = plain;
+            tagImage.type = Image.Type.Sliced;
+            tagImage.pixelsPerUnitMultiplier = PanelSpriteRadius / 15f;
+            tagImage.color = Red;
+            Text tagText = NewText("TagText", tag, UiText.GoalTitle, 15, White, TextAnchor.MiddleCenter, true, false);
+            Stretch(tagText.rectTransform, 0f);
+
+            Text label = NewText("Label", banner, "Obiettivo", 18, Ink, TextAnchor.MiddleLeft, false, false);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
             UiPop labelPop = label.gameObject.AddComponent<UiPop>();
-            Wire.Float(labelPop, "startScale", 0.7f);
-            Wire.Float(labelPop, "duration", 0.4f);
+            Wire.Float(labelPop, "startScale", 0.92f);
+            Wire.Float(labelPop, "duration", 0.3f);
 
             // Il componente sta su un oggetto sempre attivo (il pannello può nascondersi da solo).
             TutorialHintView view = parent.gameObject.AddComponent<TutorialHintView>();
@@ -335,9 +409,9 @@ namespace Elfshift.EditorTools
         private static InteractionPromptView BuildPrompts(RectTransform parent, HudSources src, Image crosshair)
         {
             RectTransform bar = NewRect("Prompts", parent);
-            Anchor(bar, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(1000f, 70f));
+            Anchor(bar, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 6f), new Vector2(1000f, 46f));
             HorizontalLayoutGroup layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 28f;
+            layout.spacing = 14f;
             layout.childAlignment = TextAnchor.LowerCenter;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -345,29 +419,30 @@ namespace Elfshift.EditorTools
             layout.childForceExpandHeight = false;
 
             Text pickupKey, pickupLabel, interactKey, interactLabel;
-            GameObject pickupChip = BuildChip(bar, "PickupChip", 130f, out pickupKey, out pickupLabel);
-            GameObject interactChip = BuildChip(bar, "InteractChip", 66f, out interactKey, out interactLabel);
+            GameObject pickupChip = BuildChip(bar, "PickupChip", 68f, out pickupKey, out pickupLabel);
+            GameObject interactChip = BuildChip(bar, "InteractChip", 32f, out interactKey, out interactLabel);
 
-            // barra di avanzamento a pillola sopra i suggerimenti
+            // barra di avanzamento sottile sopra i suggerimenti
             RectTransform progress = NewRect("HoldProgress", parent);
-            Anchor(progress, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(400f, 38f));
-            AddPanelImage(progress.gameObject, new Color(0.4f, 0.27f, 0.22f), 6f);
+            Anchor(progress, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(260f, 10f));
+            Image progressBg = progress.gameObject.AddComponent<Image>();
+            progressBg.sprite = plain;
+            progressBg.type = Image.Type.Sliced;
+            progressBg.pixelsPerUnitMultiplier = PanelSpriteRadius / 5f;
+            progressBg.color = Glass;
             RectTransform fill = NewRect("Fill", progress);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0f, 1f);
-            fill.offsetMin = new Vector2(5f, 5f);
-            fill.offsetMax = new Vector2(-5f, -5f);
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
             Image fillImage = fill.gameObject.AddComponent<Image>();
-            fillImage.sprite = panel;
+            fillImage.sprite = plain;
             fillImage.type = Image.Type.Sliced;
-            fillImage.color = Gold;
-            UiWobble progressWobble = progress.gameObject.AddComponent<UiWobble>();
-            Wire.Float(progressWobble, "rotationDegrees", 0.8f);
-            Wire.Float(progressWobble, "scaleAmount", 0.02f);
-            Wire.Float(progressWobble, "speed", 9f);
+            fillImage.pixelsPerUnitMultiplier = PanelSpriteRadius / 5f;
+            fillImage.color = Amber;
 
-            Text hint = NewText("FarHint", parent, "Avvicinati", 32, White, TextAnchor.MiddleCenter, true);
-            Anchor(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(900f, 48f));
+            Text hint = NewText("FarHint", parent, "Avvicinati", 19, White, TextAnchor.MiddleCenter, false, true);
+            Anchor(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(900f, 34f));
             hint.gameObject.AddComponent<UiPop>();
             hint.gameObject.SetActive(false);
 
@@ -386,14 +461,19 @@ namespace Elfshift.EditorTools
             return view;
         }
 
+        /// <summary>Suggerimento "[tasto] azione": pillola scura semitrasparente, tasto chiaro, testo bianco.</summary>
         private static GameObject BuildChip(RectTransform parent, string name, float keyMinWidth, out Text key, out Text label)
         {
             RectTransform chip = NewRect(name, parent);
-            chip.sizeDelta = new Vector2(10f, 70f);
-            AddPanelImage(chip.gameObject, Cream, 7f);
+            chip.sizeDelta = new Vector2(10f, 46f);
+            Image bg = chip.gameObject.AddComponent<Image>();
+            bg.sprite = plain;
+            bg.type = Image.Type.Sliced;
+            bg.pixelsPerUnitMultiplier = PanelSpriteRadius / 23f;
+            bg.color = Glass;
             HorizontalLayoutGroup layout = chip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(12, 30, 8, 10);
-            layout.spacing = 14f;
+            layout.padding = new RectOffset(7, 20, 7, 7);
+            layout.spacing = 10f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
@@ -402,24 +482,24 @@ namespace Elfshift.EditorTools
             ContentSizeFitter fitter = chip.gameObject.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            chip.gameObject.AddComponent<UiPop>();
+            UiPop pop = chip.gameObject.AddComponent<UiPop>();
+            Wire.Float(pop, "startScale", 0.85f);
 
-            // tasto dorato che "respira"
             RectTransform keyBox = NewRect("Key", chip);
-            AddPanelImage(keyBox.gameObject, Gold, 5f);
+            Image keyImage = keyBox.gameObject.AddComponent<Image>();
+            keyImage.sprite = keycap;
+            keyImage.type = Image.Type.Sliced;
+            keyImage.pixelsPerUnitMultiplier = 14f / 9f;
+            keyImage.color = White;
             LayoutElement keyLayout = keyBox.gameObject.AddComponent<LayoutElement>();
             keyLayout.minWidth = keyMinWidth;
-            keyLayout.minHeight = 50f;
-            keyLayout.preferredHeight = 50f;
-            UiWobble keyWobble = keyBox.gameObject.AddComponent<UiWobble>();
-            Wire.Float(keyWobble, "rotationDegrees", 0f);
-            Wire.Float(keyWobble, "scaleAmount", 0.06f);
-            Wire.Float(keyWobble, "speed", 4.5f);
-            key = NewText("KeyText", keyBox, "E", 30, Ink, TextAnchor.MiddleCenter, false);
-            Stretch(key.rectTransform, 6f);
+            keyLayout.minHeight = 32f;
+            keyLayout.preferredHeight = 32f;
+            key = NewText("KeyText", keyBox, "E", 15, Ink, TextAnchor.MiddleCenter, true, false);
+            SetRect(key.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(6f, 4f), new Vector2(-6f, -1f));
             key.horizontalOverflow = HorizontalWrapMode.Overflow;
 
-            label = NewText("Label", chip, "Azione", 32, Ink, TextAnchor.MiddleLeft, false);
+            label = NewText("Label", chip, "Azione", 19, White, TextAnchor.MiddleLeft, false, false);
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             chip.gameObject.SetActive(false);
             return chip.gameObject;
@@ -428,30 +508,28 @@ namespace Elfshift.EditorTools
         private static CarriedItemView BuildCarried(RectTransform parent, HudSources src)
         {
             RectTransform root = NewRect("Carried", parent);
-            Anchor(root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 4f), new Vector2(330f, 110f));
-            root.gameObject.AddComponent<UiPop>();
+            Anchor(root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 2f), new Vector2(300f, 84f));
+            UiPop pop = root.gameObject.AddComponent<UiPop>();
+            Wire.Float(pop, "startScale", 0.85f);
 
-            // cartellino con il nome
+            // cartellino con il nome, a destra del tondo
             RectTransform tag = NewRect("NameTag", root);
-            Anchor(tag, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(66f, -4f), new Vector2(262f, 58f));
-            AddPanelImage(tag.gameObject, Cream, 6f);
-            Text label = NewText("Name", tag, "Oggetto", 32, Ink, TextAnchor.MiddleCenter, false);
-            label.rectTransform.anchorMin = Vector2.zero;
-            label.rectTransform.anchorMax = Vector2.one;
-            label.rectTransform.offsetMin = new Vector2(40f, 0f);
-            label.rectTransform.offsetMax = new Vector2(-10f, -2f);
+            Anchor(tag, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(58f, -2f), new Vector2(200f, 48f));
+            AddPanel(tag, Paper, 24f);
+            Text caption = NewText("Caption", tag, UiText.CarriedTitle, 12, InkSoft, TextAnchor.UpperLeft, true, false);
+            SetRect(caption.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 1f), new Vector2(36f, 0f), new Vector2(-12f, -5f));
+            Text label = NewText("Name", tag, "Oggetto", 19, Ink, TextAnchor.LowerLeft, true, false);
+            SetRect(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0f), new Vector2(36f, 6f), new Vector2(-12f, 0f));
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
 
-            // distintivo tondo con l'icona
+            // tondo con l'icona dell'oggetto
             RectTransform badge = NewRect("IconBadge", root);
-            Anchor(badge, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0f), new Vector2(104f, 104f));
+            Anchor(badge, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-8f, 0f), new Vector2(92f, 92f));
             Image badgeImage = badge.gameObject.AddComponent<Image>();
-            badgeImage.sprite = circle;
-            badgeImage.color = new Color(1f, 0.9f, 0.55f);
-            Shadow shadow = badge.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.3f);
-            shadow.effectDistance = new Vector2(0f, -6f);
+            badgeImage.sprite = softDisc;
+            badgeImage.color = Paper;
             RectTransform iconRt = NewRect("Icon", badge);
-            Stretch(iconRt, 12f);
+            Stretch(iconRt, 18f);
             RawImage icon = iconRt.gameObject.AddComponent<RawImage>();
             icon.raycastTarget = false;
 
@@ -474,19 +552,29 @@ namespace Elfshift.EditorTools
             return (RectTransform)go.transform;
         }
 
-        /// <summary>Aggiunge a un oggetto l'immagine "adesivo" (9-slice colorabile) con ombra sotto.</summary>
-        private static Image AddPanelImage(GameObject go, Color tint, float shadowOffset)
+        /// <summary>
+        /// Aggiunge il pannello color carta con ombra morbida come primo figlio "Bg" (così sta dietro al contenuto).
+        /// Lo sprite contiene anche l'ombra attorno al pannello: il figlio viene quindi allargato di quel margine.
+        /// "radius" è il raggio degli angoli voluto, in pixel dell'interfaccia.
+        /// </summary>
+        private static Image AddPanel(RectTransform target, Color tint, float radius)
         {
-            Image image = go.AddComponent<Image>();
+            RectTransform bg = NewRect("Bg", target);
+            bg.SetAsFirstSibling();
+            float multiplier = PanelSpriteRadius / Mathf.Max(1f, radius);
+            float pad = ProceduralTextures.SoftPanelPad / multiplier;
+            bg.anchorMin = Vector2.zero;
+            bg.anchorMax = Vector2.one;
+            bg.offsetMin = new Vector2(-pad, -pad);
+            bg.offsetMax = new Vector2(pad, pad);
+            LayoutElement ignore = bg.gameObject.AddComponent<LayoutElement>();
+            ignore.ignoreLayout = true;
+            Image image = bg.gameObject.AddComponent<Image>();
             image.sprite = panel;
             image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = multiplier;
             image.color = tint;
-            if (shadowOffset > 0f)
-            {
-                Shadow s = go.AddComponent<Shadow>();
-                s.effectColor = new Color(0f, 0f, 0f, 0.32f);
-                s.effectDistance = new Vector2(0f, -shadowOffset);
-            }
+            image.raycastTarget = false;
             return image;
         }
 
@@ -517,12 +605,12 @@ namespace Elfshift.EditorTools
             rt.offsetMax = offsetMax;
         }
 
-        /// <summary>Testo nel font cartoon. Con "outlined" ha contorno marrone spesso (per testi chiari su fondi colorati).</summary>
-        private static Text NewText(string name, Transform parent, string content, int size, Color color, TextAnchor anchor, bool outlined)
+        /// <summary>Testo in Nunito. "bold" usa il peso più deciso; "shadow" aggiunge una leggera ombra (per testi su sfondo 3D).</summary>
+        private static Text NewText(string name, Transform parent, string content, int size, Color color, TextAnchor anchor, bool bold, bool shadow)
         {
             RectTransform rt = NewRect(name, parent);
             Text text = rt.gameObject.AddComponent<Text>();
-            text.font = font;
+            text.font = bold ? fontBold : font;
             text.text = content;
             text.fontSize = size;
             text.color = color;
@@ -531,14 +619,11 @@ namespace Elfshift.EditorTools
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.raycastTarget = false;
-            if (outlined)
+            if (shadow)
             {
-                Outline o = rt.gameObject.AddComponent<Outline>();
-                o.effectColor = Ink;
-                o.effectDistance = new Vector2(3f, -3f);
                 Shadow s = rt.gameObject.AddComponent<Shadow>();
-                s.effectColor = new Color(0f, 0f, 0f, 0.35f);
-                s.effectDistance = new Vector2(0f, -5f);
+                s.effectColor = new Color(0.1f, 0.06f, 0.05f, 0.45f);
+                s.effectDistance = new Vector2(0f, -2f);
             }
             return text;
         }

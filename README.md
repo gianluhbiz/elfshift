@@ -66,9 +66,14 @@ Puoi rilanciare il punto 2 quando vuoi: ricostruisce tutto da zero (le cartelle 
 
 ## 4b. Grafica e interfaccia
 
-- **Interfaccia in stile cartoon**: pannelli "adesivo" con contorno marrone spesso, font arrotondato (*Lilita One*, licenza OFL, in `Assets/Fonts`), distintivi tondi per punti e biscotti, lettere degli ordini che entrano con un rimbalzo, dondolano, tremano quando il tempo sta per finire, e alla consegna si timbrano con *OK!* e volano via. Scritte come *+100* saltano fuori dai contatori.
-- **Shader stilizzato** (`Assets/Shaders/ElfshiftStylizedLit.shader`): come il shader standard di URP, ma con variazione di colore "dipinta a mano", venatura del legno, ombra di contatto vicino al pavimento e luce di bordo morbida. Se compare un errore di shader nella Console, il costruttore usa da solo il shader standard. Puoi attivarlo/disattivarlo dal menu **Elfshift → Grafica → Shader stilizzato**, poi rilancia la costruzione.
-- La costruzione alza anche le impostazioni di qualità del progetto URP (anti-aliasing 4x, ombre morbide a 4096).
+- **Modelli 3D scolpiti in Blender**: mobili, slitta, albero, camino, giocattoli, mani dell'elfo, boiserie e travi sono modellati con Blender (tramite script, quindi ripetibili) con forme morbide, smussi su tutti gli spigoli, piccole irregolarità "fatte a mano" e ombreggiatura negli angoli già calcolata (*ambient occlusion*). I file sono in `Assets/Models/Source/*.bytes` e il costruttore li carica da solo. Se un file mancasse, al suo posto usa la vecchia forma semplice (e lo scrive nella Console).
+- **Texture "dipinte"**: pavimento a listoni con venature e nodi, carta da parati crema con rametti di agrifoglio (`Assets/Textures/Source`).
+- **Luce più morbida**: oltre alle ombre, la costruzione attiva in URP l'effetto *Screen Space Ambient Occlusion* (ombre leggere dove gli oggetti si avvicinano) e alza la qualità (anti-aliasing 4x, ombre morbide a 4096).
+- **Interfaccia in stile "cozy"**: pannelli color carta con angoli tondi e ombra sfumata (niente contorni spessi), testo marrone caldo nel font arrotondato **Nunito** (licenza OFL, in `Assets/Fonts`), icone di stella e biscotto disegnate in 3D, letterine con sigillo di ceralacca e barra del tempo sottile, suggerimenti dei tasti come piccoli "tasti" chiari su pillole scure. Le animazioni sono brevi e leggere.
+- **Shader stilizzato** (`Assets/Shaders/ElfshiftStylizedLit.shader`): come quello standard di URP, più variazione di colore "dipinta a mano", venatura del legno, ombreggiatura dei modelli e luce di bordo morbida. Se compare un errore di shader nella Console, il costruttore usa da solo quello standard. Si attiva/disattiva da **Elfshift → Grafica → Shader stilizzato** (poi rilancia la costruzione).
+- **Movimento**: partenza e arresto quasi immediati e la direzione segue subito lo sguardo (niente effetto "ghiaccio"); oscillazione della visuale più leggera.
+
+> Per chi vuole modificare i modelli (non serve per giocare): gli script sono in `Tools/Blender` (`build_models.py`, `ui_icons.py`, cartella `models/`) e `Tools/Textures/make_textures.py`. Servono Python 3.13 e il modulo `bpy` (`pip install bpy`).
 
 ## 5. Giocare
 
@@ -84,7 +89,7 @@ Premi il pulsante **Play ▶** (in alto al centro). Il cursore del mouse viene b
 | **E** o **tasto destro del mouse** (tenuto premuto) — o pulsante X | Costruire sul banco |
 | **Esc** | Libera il cursore dalla finestra di gioco |
 
-**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un mirino al centro che si allarga e diventa dorato quando puoi interagire. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
+**Cosa devi vedere:** dagli occhi dell'elfo, un grande laboratorio di legno (28 × 20 metri) con soffitto a travi, festoni di bandierine, lucine, lampade e lampadario, un camino acceso con poltrone e calze, un albero di Natale, vetrine di giocattoli, tre banchi di lavoro in fila, scaffali lungo la parete sinistra, finestre con neve che cade e, a destra oltre la porta, la slitta sulla banchina. Vedi le tue braccia verdi e un puntino al centro dello schermo che diventa dorato quando puoi interagire. In alto compaiono: la **letterina** con il trenino richiesto e il tempo, e una riga **"Obiettivo"** che ti dice sempre cosa fare. Una **freccia dorata** fluttua sopra il posto dove devi andare.
 
 **Importante:** si interagisce con ciò che *guardi*. Per usare uno scaffale, un banco o la slitta devi essere vicino **e** rivolto verso di loro.
 
@@ -139,7 +144,7 @@ Il numero di ordini contemporanei si cambia nell'oggetto `_Game` → componente 
 
 ## 7. Sostituire i modelli provvisori con modelli definitivi
 
-I modelli attuali sono **generati da codice** (nessun asset esterno, nessun problema di licenza): servono a provare il gioco con un aspetto gradevole. Per sostituirli non serve riscrivere il gameplay:
+I modelli attuali sono **creati da script** (C# e Blender, nessun asset esterno, nessun problema di licenza). Per sostituirli con modelli fatti a mano da un artista non serve riscrivere il gameplay:
 
 - **Oggetti (legno, trenino…)**: seleziona l'asset `Item_*` in `Assets/Settings/Data` e trascina il tuo prefab nel campo **Visual Prefab**. L'origine del modello deve essere al centro della base. Vale ovunque: in mano, sul banco, nelle icone della letterina.
 - **Elfo**: in prima persona il corpo non si vede (proietta solo l'ombra); le braccia visibili sono `FirstPersonHands`, figlie della telecamera nel prefab `Player`. Il corpo è il figlio `ElfVisual`. Sostituiscili con il tuo personaggio e aggiungi un componente che implementa `ICharacterVisual` (4 metodi: velocità, trasporto, lavoro, raccolta; per esempio imposta i parametri di un Animator). Il resto non cambia.
@@ -172,4 +177,4 @@ Strumenti gratuiti utili per i modelli definitivi: **Blender** (<https://www.ble
 
 Nota sulla visuale: la Fase 1 è in **prima persona** (telecamera all'altezza degli occhi, mouse per guardare). Il modello dell'elfo con le sue animazioni resta nel prefab e proietta l'ombra; tornerà visibile se in futuro vorremo una vista in terza persona.
 
-Tutti i modelli, le texture e le icone di questa fase sono **originali, generati da codice**; non contengono contenuti di terzi.
+Tutti i modelli, le texture e le icone di questa fase sono **originali, generati da codice** (in C# e con script di Blender); non contengono contenuti di terzi. L'unico elemento esterno è il font **Nunito** (licenza SIL Open Font License, utilizzabile anche in giochi commerciali: il testo della licenza è in `Assets/Fonts/Nunito-OFL.txt`).

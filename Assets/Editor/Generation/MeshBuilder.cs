@@ -110,6 +110,9 @@ namespace Elfshift.EditorTools
         private readonly List<Vector3> verts = new List<Vector3>();
         private readonly List<Vector3> norms = new List<Vector3>();
         private readonly List<Vector2> uvs = new List<Vector2>();
+        // Colore per vertice: nei modelli fatti in Blender contiene l'ombreggiatura "ambient occlusion"
+        // (angoli e fessure più scuri). Le forme create qui in C# usano il bianco (nessun effetto).
+        private readonly List<Color> colors = new List<Color>();
         private readonly List<List<int>> tris = new List<List<int>>();
         private readonly List<string> materialKeys = new List<string>();
 
@@ -576,7 +579,50 @@ namespace Elfshift.EditorTools
             Vector3 wn = nxf.MultiplyVector(n);
             norms.Add(wn.sqrMagnitude > 1e-12f ? wn.normalized : Vector3.up);
             uvs.Add(uv);
+            colors.Add(Color.white);
             return verts.Count - 1;
+        }
+
+        // ------------------------------------------------------------------ Modelli fatti in Blender
+        /// <summary>
+        /// Aggiunge al builder un modello scolpito in Blender (file Assets/Models/Source/NOME.bytes),
+        /// spostato/ruotato/scalato con "xf". I materiali del modello hanno i nomi della tavolozza.
+        /// Restituisce falso (senza aggiungere nulla) se il file non esiste: chi chiama può usare una forma di riserva.
+        /// </summary>
+        public bool Import(string modelName, Matrix4x4 xf)
+        {
+            ImportedMesh data = ImportedMesh.Load(modelName);
+            if (data == null) return false;
+            Matrix4x4 nxf = xf.inverse.transpose;
+            int baseIndex = verts.Count;
+            for (int i = 0; i < data.Positions.Length; i++)
+            {
+                verts.Add(xf.MultiplyPoint3x4(data.Positions[i]));
+                Vector3 wn = nxf.MultiplyVector(data.Normals[i]);
+                norms.Add(wn.sqrMagnitude > 1e-12f ? wn.normalized : Vector3.up);
+                uvs.Add(data.Uvs[i]);
+                colors.Add(data.Colors[i]);
+            }
+            // Una scala negativa (specchio) inverte il verso dei triangoli: lo correggiamo.
+            bool mirrored = xf.determinant < 0f;
+            for (int s = 0; s < data.SubmeshKeys.Length; s++)
+            {
+                List<int> list = tris[Sub(data.SubmeshKeys[s])];
+                int[] t = data.Submeshes[s];
+                for (int i = 0; i + 2 < t.Length; i += 3)
+                {
+                    list.Add(baseIndex + t[i]);
+                    if (mirrored) { list.Add(baseIndex + t[i + 2]); list.Add(baseIndex + t[i + 1]); }
+                    else { list.Add(baseIndex + t[i + 1]); list.Add(baseIndex + t[i + 2]); }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>Come <see cref="Import(string, Matrix4x4)"/> con posizione, rotazione (gradi) e scala uniforme.</summary>
+        public bool Import(string modelName, Vector3 pos, Vector3 euler = default(Vector3), float scale = 1f)
+        {
+            return Import(modelName, Xf(pos, euler, Vector3.one * scale));
         }
 
         /// <summary>
@@ -609,6 +655,7 @@ namespace Elfshift.EditorTools
             mesh.SetVertices(verts);
             mesh.SetNormals(norms);
             mesh.SetUVs(0, uvs);
+            mesh.SetColors(colors);
             mesh.subMeshCount = tris.Count;
             for (int i = 0; i < tris.Count; i++) mesh.SetTriangles(tris[i], i);
             mesh.RecalculateBounds();

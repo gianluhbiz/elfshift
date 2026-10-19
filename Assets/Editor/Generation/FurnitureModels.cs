@@ -3,9 +3,22 @@ using UnityEngine;
 
 namespace Elfshift.EditorTools
 {
-    /// <summary>Scaffali, banchi di lavoro e slitta. Tutti i modelli "guardano" verso +Z (il lato da cui si usano).</summary>
+    /// <summary>
+    /// Scaffali, banchi di lavoro e slitta. Tutti i modelli "guardano" verso +Z (il lato da cui si usano).
+    /// La grafica viene dai modelli scolpiti in Blender (Tools/Blender/models/furniture.py, file
+    /// Assets/Models/Source/Furniture_*.bytes); se un file manca si usa la vecchia forma costruita qui in C#.
+    /// Punti di riferimento, collider e nomi degli oggetti restano sempre gli stessi.
+    /// </summary>
     public static class FurnitureModels
     {
+        /// <summary>Vero se tutti i modelli Blender indicati esistono (così non si mescolano pezzi nuovi e vecchi).</summary>
+        private static bool HasModels(params string[] names)
+        {
+            for (int i = 0; i < names.Length; i++)
+                if (!ImportedMesh.Exists(names[i])) return false;
+            return true;
+        }
+
         public const float ShelfWidth = 2.4f;
         public const float ShelfDepth = 0.75f;
         public const float ShelfHeight = 2.3f;
@@ -24,30 +37,15 @@ namespace Elfshift.EditorTools
             float w = ShelfWidth, d = ShelfDepth, h = ShelfHeight;
 
             MeshBuilder frame = new MeshBuilder();
-            // montanti laterali e pannello posteriore
-            frame.Box("WoodMid", new Vector3(-(w / 2f - 0.05f), h / 2f, 0f), new Vector3(0.1f, h, d), 0.02f);
-            frame.Box("WoodMid", new Vector3((w / 2f - 0.05f), h / 2f, 0f), new Vector3(0.1f, h, d), 0.02f);
-            frame.Box("WoodDark", new Vector3(0f, h / 2f, -d / 2f + 0.03f), new Vector3(w - 0.1f, h - 0.06f, 0.05f), 0.01f);
-            // assi dei ripiani con bordino frontale
-            float[] boardY = { 0.2f, 0.85f, 1.5f, 2.26f };
-            for (int i = 0; i < boardY.Length; i++)
-            {
-                frame.Box("WoodLight", new Vector3(0f, boardY[i], 0.005f), new Vector3(w - 0.1f, 0.07f, d - 0.03f), 0.018f);
-                if (i < 3) frame.Box("WoodDeep", new Vector3(0f, boardY[i] + 0.075f, d / 2f - 0.025f), new Vector3(w - 0.14f, 0.09f, 0.03f), 0.01f);
-            }
-            // cappello di neve sul bordo superiore
-            frame.Ball("Snow", new Vector3(-0.55f, h + 0.02f, 0.02f), 0.5f, new Vector3(1.1f, 0.2f, 0.7f), Vector3.zero, 14);
-            frame.Ball("Snow", new Vector3(0.45f, h + 0.015f, 0.0f), 0.55f, new Vector3(1.0f, 0.17f, 0.68f), Vector3.zero, 14);
-            frame.Ball("Snow", new Vector3(0.95f, h + 0.01f, 0.06f), 0.3f, new Vector3(0.9f, 0.2f, 0.9f), Vector3.zero, 12);
+            if (!HasModels("Furniture_Shelf_Frame") || !frame.Import("Furniture_Shelf_Frame", Vector3.zero))
+                BuildShelfFrameFallback(frame, w, d, h);
             ModelKit.Part(root, "Frame", frame);
 
             // insegna sopra lo scaffale con un simbolo
             MeshBuilder sign = new MeshBuilder();
-            string signMat = kind == "Wood" ? "WoodEnd" : (kind == "Cloth" ? "ClothPink" : (kind == "Toys" ? "ClothYellow" : "MetalLight"));
-            sign.Box("WoodDeep", new Vector3(0f, h + 0.3f, d / 2f - 0.1f), new Vector3(1.0f, 0.36f, 0.06f), 0.02f);
-            sign.Cyl(signMat, new Vector3(0f, h + 0.3f, d / 2f - 0.07f), 0.12f, 0.03f, 0.008f, new Vector3(90f, 0f, 0f), 18);
-            sign.Box("WoodDeep", new Vector3(-0.38f, h + 0.1f, d / 2f - 0.1f), new Vector3(0.05f, 0.22f, 0.05f), 0.01f);
-            sign.Box("WoodDeep", new Vector3(0.38f, h + 0.1f, d / 2f - 0.1f), new Vector3(0.05f, 0.22f, 0.05f), 0.01f);
+            string signModel = "Furniture_Shelf_Sign_" + kind;
+            if (!HasModels(signModel) || !sign.Import(signModel, Vector3.zero))
+                BuildShelfSignFallback(sign, kind, d, h);
             ModelKit.Part(root, "Sign", sign);
 
             // merce
@@ -64,9 +62,42 @@ namespace Elfshift.EditorTools
             return root.gameObject;
         }
 
+        /// <summary>Telaio dello scaffale fatto in C# (riserva se manca il modello Blender).</summary>
+        private static void BuildShelfFrameFallback(MeshBuilder frame, float w, float d, float h)
+        {
+            // montanti laterali e pannello posteriore
+            frame.Box("WoodMid", new Vector3(-(w / 2f - 0.05f), h / 2f, 0f), new Vector3(0.1f, h, d), 0.02f);
+            frame.Box("WoodMid", new Vector3((w / 2f - 0.05f), h / 2f, 0f), new Vector3(0.1f, h, d), 0.02f);
+            frame.Box("WoodDark", new Vector3(0f, h / 2f, -d / 2f + 0.03f), new Vector3(w - 0.1f, h - 0.06f, 0.05f), 0.01f);
+            // assi dei ripiani con bordino frontale
+            float[] boardY = { 0.2f, 0.85f, 1.5f, 2.26f };
+            for (int i = 0; i < boardY.Length; i++)
+            {
+                frame.Box("WoodLight", new Vector3(0f, boardY[i], 0.005f), new Vector3(w - 0.1f, 0.07f, d - 0.03f), 0.018f);
+                if (i < 3) frame.Box("WoodDeep", new Vector3(0f, boardY[i] + 0.075f, d / 2f - 0.025f), new Vector3(w - 0.14f, 0.09f, 0.03f), 0.01f);
+            }
+            // cappello di neve sul bordo superiore
+            frame.Ball("Snow", new Vector3(-0.55f, h + 0.02f, 0.02f), 0.5f, new Vector3(1.1f, 0.2f, 0.7f), Vector3.zero, 14);
+            frame.Ball("Snow", new Vector3(0.45f, h + 0.015f, 0.0f), 0.55f, new Vector3(1.0f, 0.17f, 0.68f), Vector3.zero, 14);
+            frame.Ball("Snow", new Vector3(0.95f, h + 0.01f, 0.06f), 0.3f, new Vector3(0.9f, 0.2f, 0.9f), Vector3.zero, 12);
+        }
+
+        /// <summary>Insegna dello scaffale fatta in C# (riserva se manca il modello Blender).</summary>
+        private static void BuildShelfSignFallback(MeshBuilder sign, string kind, float d, float h)
+        {
+            string signMat = kind == "Wood" ? "WoodEnd" : (kind == "Cloth" ? "ClothPink" : (kind == "Toys" ? "ClothYellow" : "MetalLight"));
+            sign.Box("WoodDeep", new Vector3(0f, h + 0.3f, d / 2f - 0.1f), new Vector3(1.0f, 0.36f, 0.06f), 0.02f);
+            sign.Cyl(signMat, new Vector3(0f, h + 0.3f, d / 2f - 0.07f), 0.12f, 0.03f, 0.008f, new Vector3(90f, 0f, 0f), 18);
+            sign.Box("WoodDeep", new Vector3(-0.38f, h + 0.1f, d / 2f - 0.1f), new Vector3(0.05f, 0.22f, 0.05f), 0.01f);
+            sign.Box("WoodDeep", new Vector3(0.38f, h + 0.1f, d / 2f - 0.1f), new Vector3(0.05f, 0.22f, 0.05f), 0.01f);
+        }
+
         private static MeshBuilder BuildShelfGoods(string kind)
         {
             MeshBuilder mb = new MeshBuilder();
+            // La vetrina dei giocattoli usa i modelli delle decorazioni (DecorModels); le altre hanno un modello Blender.
+            string goodsModel = "Furniture_ShelfGoods_" + kind;
+            if (kind != "Toys" && HasModels(goodsModel) && mb.Import(goodsModel, Vector3.zero)) return mb;
             const float b0 = 0.235f, b1 = 0.885f, b2 = 1.535f;
             if (kind == "Wood")
             {
@@ -183,6 +214,39 @@ namespace Elfshift.EditorTools
             float w = BenchWidth, d = BenchDepth, top = BenchTop;
 
             MeshBuilder mb = new MeshBuilder();
+            string propsModel = "Furniture_Bench_Props_" + kind;
+            if (HasModels("Furniture_Bench_Base", propsModel) && mb.Import("Furniture_Bench_Base", Vector3.zero) && mb.Import(propsModel, Vector3.zero))
+                ModelKit.Part(root, "Body", mb);
+            else
+                ModelKit.Part(root, "Body", BuildWorkbenchBodyFallback(kind, w, d, top));
+
+            // appoggi (ingresso x2 + uscita) con vassoi e anelli decorativi
+            if (pads)
+            {
+                MeshBuilder padMesh = new MeshBuilder();
+                if (!HasModels("Furniture_Bench_Pads") || !padMesh.Import("Furniture_Bench_Pads", Vector3.zero))
+                    BuildPadsFallback(padMesh, top);
+                ModelKit.Part(root, "Pads", padMesh);
+                Transform in1 = ModelKit.Empty(root, "Input1", new Vector3(-0.65f, top + 0.014f, 0.08f), new Vector3(0f, 90f, 0f));
+                Transform in2 = ModelKit.Empty(root, "Input2", new Vector3(-0.05f, top + 0.014f, 0.08f), new Vector3(0f, 90f, 0f));
+                Transform outp = ModelKit.Empty(root, "Output", new Vector3(0.72f, top + 0.014f, 0.08f), Vector3.zero);
+                ModelKit.Empty(in1, "Fx", Vector3.zero);
+                ModelKit.Empty(root, "WorkFx", new Vector3(-0.35f, top + 0.15f, 0.08f));
+                ModelKit.Empty(root, "CompleteFx", new Vector3(0.72f, top + 0.3f, 0.08f));
+                if (in2 == null || outp == null) Debug.LogWarning("Appoggi non creati");
+            }
+            ModelKit.Empty(root, "InteractionPoint", new Vector3(0f, 0f, 0.95f));
+
+            GameObject col = new GameObject("Collider");
+            col.transform.SetParent(root, false);
+            ModelKit.AddBoxCollider(col, new Vector3(0f, top / 2f, 0f), new Vector3(w, top, d));
+            return root.gameObject;
+        }
+
+        /// <summary>Corpo del banco fatto in C# (riserva se mancano i modelli Blender).</summary>
+        private static MeshBuilder BuildWorkbenchBodyFallback(string kind, float w, float d, float top)
+        {
+            MeshBuilder mb = new MeshBuilder();
             // piano, bordo, gambe, ripiano basso
             mb.Box("WoodLight", new Vector3(0f, top - 0.05f, 0f), new Vector3(w, 0.1f, d), 0.025f);
             mb.Box("WoodMid", new Vector3(0f, top - 0.17f, d / 2f - 0.07f), new Vector3(w - 0.12f, 0.14f, 0.05f), 0.015f);
@@ -264,12 +328,13 @@ namespace Elfshift.EditorTools
                 mb.Box("RedSanta", new Vector3(0.05f, top + 0.015f, 0.3f), new Vector3(0.1f, 0.03f, 0.04f), 0.01f, new Vector3(0f, 25f, 0f));
                 mb.Box("MetalLight", new Vector3(0.18f, top + 0.015f, 0.34f), new Vector3(0.16f, 0.015f, 0.04f), 0.004f, new Vector3(0f, 25f, 0f));
             }
-            ModelKit.Part(root, "Body", mb);
+            return mb;
+        }
 
-            // appoggi (ingresso x2 + uscita) con anelli decorativi
-            if (pads)
+        /// <summary>Appoggi del banco fatti in C# (riserva se manca il modello Blender).</summary>
+        private static void BuildPadsFallback(MeshBuilder padMesh, float top)
+        {
             {
-                MeshBuilder padMesh = new MeshBuilder();
                 float[] padX = { -0.65f, -0.05f, 0.72f };
                 for (int i = 0; i < padX.Length; i++)
                 {
@@ -280,27 +345,17 @@ namespace Elfshift.EditorTools
                 // freccia dipinta tra ingressi e uscita
                 padMesh.Box("WoodDeep", new Vector3(0.32f, top + 0.008f, 0.08f), new Vector3(0.22f, 0.006f, 0.05f), 0.002f);
                 padMesh.Cone("WoodDeep", new Vector3(0.43f, top + 0.004f, 0.08f), 0.07f, 0.1f, new Vector3(0f, 0f, 0f), 3);
-                ModelKit.Part(root, "Pads", padMesh);
-                Transform in1 = ModelKit.Empty(root, "Input1", new Vector3(-0.65f, top + 0.014f, 0.08f), new Vector3(0f, 90f, 0f));
-                Transform in2 = ModelKit.Empty(root, "Input2", new Vector3(-0.05f, top + 0.014f, 0.08f), new Vector3(0f, 90f, 0f));
-                Transform outp = ModelKit.Empty(root, "Output", new Vector3(0.72f, top + 0.014f, 0.08f), Vector3.zero);
-                ModelKit.Empty(in1, "Fx", Vector3.zero);
-                ModelKit.Empty(root, "WorkFx", new Vector3(-0.35f, top + 0.15f, 0.08f));
-                ModelKit.Empty(root, "CompleteFx", new Vector3(0.72f, top + 0.3f, 0.08f));
-                if (in2 == null || outp == null) Debug.LogWarning("Appoggi non creati");
             }
-            ModelKit.Empty(root, "InteractionPoint", new Vector3(0f, 0f, 0.95f));
-
-            GameObject col = new GameObject("Collider");
-            col.transform.SetParent(root, false);
-            ModelKit.AddBoxCollider(col, new Vector3(0f, top / 2f, 0f), new Vector3(w, top, d));
-            return root.gameObject;
         }
 
         // ============================================================================ REGALI
         /// <summary>Pacco regalo con nastro a croce e fiocco. "pos" è il centro della base.</summary>
         public static void AddGift(MeshBuilder mb, Vector3 pos, Vector3 size, string boxMat, string ribbonMat, float yaw)
         {
+            // Modello Blender di 1 x 1 x 1 m (base nell'origine) scalato alla misura richiesta.
+            string model = "Furniture_Gift_" + boxMat + "_" + ribbonMat;
+            if (HasModels(model) && mb.Import(model, Matrix4x4.TRS(pos, Quaternion.Euler(0f, yaw, 0f), size))) return;
+
             Quaternion q = Quaternion.Euler(0f, yaw, 0f);
             Vector3 c = pos + new Vector3(0f, size.y / 2f, 0f);
             Vector3 e = new Vector3(0f, yaw, 0f);
@@ -320,6 +375,32 @@ namespace Elfshift.EditorTools
             ModelKit.Begin("Sleigh");
             Transform root = ModelKit.Empty(parent, "Sleigh", Vector3.zero);
             MeshBuilder mb = new MeshBuilder();
+            MeshBuilder lamps = new MeshBuilder();
+            if (HasModels("Furniture_Sleigh", "Furniture_Sleigh_Lamps") && mb.Import("Furniture_Sleigh", Vector3.zero) && lamps.Import("Furniture_Sleigh_Lamps", Vector3.zero))
+            {
+                ModelKit.Part(root, "Body", mb);
+                ModelKit.Part(root, "Lamps", lamps);
+            }
+            else
+            {
+                BuildSleighFallback(mb, lamps);
+                ModelKit.Part(root, "Body", mb);
+                ModelKit.Part(root, "Lamps", lamps);
+            }
+
+            ModelKit.Empty(root, "DropPoint", new Vector3(0f, 1.2f, 0.45f));
+            ModelKit.Empty(root, "InteractionPoint", new Vector3(-1.5f, 0f, 0.2f));
+            ModelKit.Empty(root, "DeliveryFx", new Vector3(0f, 1.5f, 0.45f));
+
+            GameObject col = new GameObject("Collider");
+            col.transform.SetParent(root, false);
+            ModelKit.AddBoxCollider(col, new Vector3(0f, 0.8f, 0.1f), new Vector3(1.5f, 1.6f, 3.4f));
+            return root.gameObject;
+        }
+
+        /// <summary>Slitta fatta in C# (riserva se mancano i modelli Blender).</summary>
+        private static void BuildSleighFallback(MeshBuilder mb, MeshBuilder lamps)
+        {
 
             // pattini dorati con riccio anteriore, uniti da traversine
             for (int side = -1; side <= 1; side += 2)
@@ -372,22 +453,10 @@ namespace Elfshift.EditorTools
             AddGift(mb, new Vector3(-0.28f, 1.2f, 0.7f), new Vector3(0.34f, 0.24f, 0.3f), "ClothPink", "Cream", -15f);
             AddGift(mb, new Vector3(0.0f, 1.32f, 0.5f), new Vector3(0.26f, 0.22f, 0.26f), "ClothYellow", "RedSanta", 5f);
             AddGift(mb, new Vector3(0.28f, 0.55f, -0.62f), new Vector3(0.28f, 0.22f, 0.28f), "GreenElf", "Cream", 40f);
-            ModelKit.Part(root, "Body", mb);
 
             // lanterne anteriori luminose
-            MeshBuilder lamps = new MeshBuilder();
             lamps.Ball("LampGlow", new Vector3(0.62f, 1.3f, 1.2f), 0.06f, 10);
             lamps.Ball("LampGlow", new Vector3(-0.62f, 1.3f, 1.2f), 0.06f, 10);
-            ModelKit.Part(root, "Lamps", lamps);
-
-            ModelKit.Empty(root, "DropPoint", new Vector3(0f, 1.2f, 0.45f));
-            ModelKit.Empty(root, "InteractionPoint", new Vector3(-1.5f, 0f, 0.2f));
-            ModelKit.Empty(root, "DeliveryFx", new Vector3(0f, 1.5f, 0.45f));
-
-            GameObject col = new GameObject("Collider");
-            col.transform.SetParent(root, false);
-            ModelKit.AddBoxCollider(col, new Vector3(0f, 0.8f, 0.1f), new Vector3(1.5f, 1.6f, 3.4f));
-            return root.gameObject;
         }
     }
 }

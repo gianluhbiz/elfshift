@@ -4,6 +4,8 @@
 //  - venatura del legno procedurale
 //  - ombra di contatto vicino al pavimento sulle pareti e sui mobili (finto ambient occlusion)
 //  - luce di bordo morbida e calda
+//  - ombreggiatura "cotta" nei colori dei vertici dai modelli di Blender (RGB = tinta, A = ambient occlusion)
+//  - compatibile con l'Ambient Occlusion in screen space (SSAO) di URP
 // Se per qualunque motivo il shader non compila, lo strumento di costruzione ripiega da solo su URP/Lit.
 Shader "Elfshift/StylizedLit"
 {
@@ -23,6 +25,7 @@ Shader "Elfshift/StylizedLit"
         _GroundHeight("Ombra a terra: altezza", Float) = 1.1
         _RimColor("Bordo: colore", Color) = (1,0.9,0.75,1)
         _RimStrength("Bordo: forza", Range(0,1)) = 0.1
+        _VertexAO("Ombreggiatura dei vertici: forza", Range(0,1)) = 1
     }
 
     SubShader
@@ -49,6 +52,7 @@ Shader "Elfshift/StylizedLit"
             float _GroundHeight;
             half4 _RimColor;
             half _RimStrength;
+            half _VertexAO;
         CBUFFER_END
         ENDHLSL
 
@@ -71,6 +75,7 @@ Shader "Elfshift/StylizedLit"
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
@@ -81,6 +86,7 @@ Shader "Elfshift/StylizedLit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -91,6 +97,7 @@ Shader "Elfshift/StylizedLit"
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 half fogFactor : TEXCOORD3;
+                half4 color : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -133,6 +140,7 @@ Shader "Elfshift/StylizedLit"
                 output.normalWS = normals.normalWS;
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
+                output.color = input.color;
                 return output;
             }
 
@@ -145,6 +153,11 @@ Shader "Elfshift/StylizedLit"
 
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
                 half3 albedo = baseSample.rgb * _BaseColor.rgb;
+
+                // 0) tinta e ombreggiatura cotte nei vertici (i modelli senza colori usano il bianco)
+                half vertexAO = lerp(1.0h, input.color.a, _VertexAO);
+                albedo *= lerp(half3(1, 1, 1), input.color.rgb, _VertexAO);
+                albedo *= lerp(1.0h, vertexAO, 0.55h);
 
                 // 1) variazione di colore "dipinta a mano"
                 float n = ValueNoise(input.positionWS * _NoiseScale);
@@ -192,7 +205,7 @@ Shader "Elfshift/StylizedLit"
                 surfaceData.smoothness = _Smoothness;
                 surfaceData.normalTS = half3(0, 0, 1);
                 surfaceData.emission = _EmissionColor.rgb + _RimColor.rgb * rim;
-                surfaceData.occlusion = 1.0;
+                surfaceData.occlusion = vertexAO;
                 surfaceData.alpha = 1.0;
                 surfaceData.clearCoatMask = 0.0;
                 surfaceData.clearCoatSmoothness = 0.0;
